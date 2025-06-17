@@ -6,7 +6,10 @@ const router = Router();
 
 // Lista clientes do representante com potenciais e valores por grupo
 router.get("/", autenticar, async (req: Request, res: Response) => {
-    const codusuario = (req as any).user?.codusuario;
+    const { codusuario: codParam } = req.query as any;
+    const { codusuario, perfil } = (req as any).user || {};
+    const representante = (perfil === "coordenador" || perfil === "diretor") && codParam ? codParam : codusuario;
+
     try {
         const { rows } = await pool.query(
             `SELECT c.id_cliente, c.nome AS nome_cliente, c.telefone, g.id_grupo, g.nome AS nome_grupo,
@@ -16,7 +19,7 @@ router.get("/", autenticar, async (req: Request, res: Response) => {
              LEFT JOIN agr_grupos g ON cg.id_grupo = g.id_grupo
              WHERE c.cod_representante = $1
              ORDER BY c.nome, g.id_grupo`,
-            [codusuario]
+            [representante]
         );
         res.json(rows);
     } catch (err) {

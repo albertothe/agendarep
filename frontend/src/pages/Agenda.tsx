@@ -1,5 +1,6 @@
 // frontend/src/pages/Agenda.tsx
 import React, { useEffect, useState } from "react"
+import jwtDecode from "jwt-decode"
 import axios from "axios"
 import dayjs from "dayjs"
 import "dayjs/locale/pt-br"
@@ -28,6 +29,9 @@ const Agenda = () => {
     const [semanaAtual, setSemanaAtual] = useState(dayjs())
     const [visitas, setVisitas] = useState<any[]>([])
     const [clientes, setClientes] = useState<any[]>([])
+    const [representantes, setRepresentantes] = useState<any[]>([])
+    const [repSelecionado, setRepSelecionado] = useState("")
+    const [perfil, setPerfil] = useState("")
     const [modalAberto, setModalAberto] = useState(false)
     const [novaVisita, setNovaVisita] = useState<any>({})
     const [usarClienteTemporario, setUsarClienteTemporario] = useState(false)
@@ -40,26 +44,48 @@ const Agenda = () => {
 
     useEffect(() => {
         if (token) {
+            const data: any = jwtDecode(token)
+            setPerfil(data.perfil)
+            if (data.perfil === "coordenador" || data.perfil === "diretor") {
+                carregarRepresentantes()
+            }
+        }
+    }, [token])
+
+    useEffect(() => {
+        if (token) {
             buscarVisitas()
             buscarClientes()
         }
-    }, [semanaAtual, token])
+    }, [semanaAtual, token, repSelecionado])
 
     const buscarVisitas = async () => {
         const inicio = diasSemana[0].format("YYYY-MM-DD")
         const fim = diasSemana[6].format("YYYY-MM-DD")
+        const params: any = { inicio, fim }
+        if (repSelecionado) params.codusuario = repSelecionado
         const res = await axios.get("http://localhost:8501/visitas", {
-            params: { inicio, fim },
+            params,
             headers: { Authorization: `Bearer ${token}` }
         })
         setVisitas(res.data)
     }
 
     const buscarClientes = async () => {
+        const params: any = {}
+        if (repSelecionado) params.codusuario = repSelecionado
         const res = await axios.get("http://localhost:8501/visitas/clientes/representante", {
+            params,
             headers: { Authorization: `Bearer ${token}` }
         })
         setClientes(res.data)
+    }
+
+    const carregarRepresentantes = async () => {
+        const res = await axios.get("http://localhost:8501/usuarios/representantes", {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        setRepresentantes(res.data)
     }
 
     const abrirModal = (data: string, hora: string) => {
@@ -96,6 +122,22 @@ const Agenda = () => {
 
     return (
         <Box p={2}>
+            {(perfil === "coordenador" || perfil === "diretor") && (
+                <Box mb={2}>
+                    <TextField
+                        select
+                        label="Representante"
+                        value={repSelecionado}
+                        onChange={(e) => setRepSelecionado(e.target.value)}
+                        size="small"
+                    >
+                        <MenuItem value="">Todos</MenuItem>
+                        {representantes.map((r: any) => (
+                            <MenuItem key={r.codusuario} value={r.codusuario}>{r.nome}</MenuItem>
+                        ))}
+                    </TextField>
+                </Box>
+            )}
             <Box display="flex" justifyContent="space-between" mb={2}>
                 <Button onClick={() => setSemanaAtual(semanaAtual.subtract(1, "week"))}>Semana anterior</Button>
                 <Typography variant="h6">Semana de {diasSemana[0].format("DD/MM")} a {diasSemana[6].format("DD/MM")}</Typography>
@@ -116,9 +158,10 @@ const Agenda = () => {
                         <Box sx={{ border: "1px solid #ccc", textAlign: "center" }}>{hora}</Box>
                         {diasSemana.map((dia, i) => {
                             const data = dia.format("YYYY-MM-DD")
-                            const visita = visitas.find((v) =>
-                                dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0,5) === hora
+                            const visitasHorario = visitas.filter(
+                                (v) => dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0,5) === hora
                             )
+                            const visita = visitasHorario[0]
                             return (
                                 <Box key={i} sx={{ border: "1px solid #ccc", position: "relative", minHeight: 70, bgcolor: visita ? (visita.confirmado ? "#e8f5e9" : "#e3f2fd") : "inherit" }}>
                                     {visita ? (
@@ -127,6 +170,11 @@ const Agenda = () => {
                                                 {visita.nome_cliente || visita.nome_cliente_temp}
                                             </Typography>
                                             <Typography variant="body2" fontSize={12} sx={{ wordBreak: "break-word" }}>{visita.observacao}</Typography>
+                                            {visitasHorario.length > 1 && (
+                                                <Typography variant="caption" sx={{ position: "absolute", top: 2, right: 2 }}>
+                                                    +{visitasHorario.length - 1}
+                                                </Typography>
+                                            )}
                                             {!visita.confirmado && (
                                                 <IconButton size="small" onClick={() => abrirModalConfirmar(visita)} sx={{ position: "absolute", bottom: 2, right: 2 }}>
                                                     <Check fontSize="small" />
