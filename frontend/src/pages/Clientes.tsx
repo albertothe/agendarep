@@ -174,15 +174,24 @@ export default function Clientes() {
 
     return (
         <Box>
-            <Typography variant="h5" gutterBottom>Clientes</Typography>
-            {(perfil === "coordenador" || perfil === "diretor") && (
-                <Box mb={1}>
+            <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                mb={2}
+            >
+                <Typography variant="h5" gutterBottom sx={{ mr: 2 }}>
+                    Clientes
+                </Typography>
+                {(perfil === "coordenador" || perfil === "diretor") && (
                     <TextField
                         select
                         label="Representante"
                         value={repSelecionado}
                         onChange={(e) => setRepSelecionado(e.target.value)}
                         size="small"
+                        sx={{ minWidth: 200, mt: { xs: 1, sm: 0 } }}
                     >
                         <MenuItem value="">Todos</MenuItem>
                         {representantes.map((r: any) => (
@@ -191,8 +200,8 @@ export default function Clientes() {
                             </MenuItem>
                         ))}
                     </TextField>
-                </Box>
-            )}
+                )}
+            </Box>
             <TextField
                 size="small"
                 placeholder="Buscar por nome ou telefone"

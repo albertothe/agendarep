@@ -122,22 +122,34 @@ const Agenda = () => {
 
     return (
         <Box p={2}>
-            {(perfil === "coordenador" || perfil === "diretor") && (
-                <Box mb={2}>
+            <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                mb={2}
+            >
+                <Typography variant="h5" gutterBottom>
+                    Agenda Semanal
+                </Typography>
+                {(perfil === "coordenador" || perfil === "diretor") && (
                     <TextField
                         select
                         label="Representante"
                         value={repSelecionado}
                         onChange={(e) => setRepSelecionado(e.target.value)}
                         size="small"
+                        sx={{ minWidth: 200, mt: { xs: 1, sm: 0 } }}
                     >
                         <MenuItem value="">Todos</MenuItem>
                         {representantes.map((r: any) => (
-                            <MenuItem key={r.codusuario} value={r.codusuario}>{r.nome}</MenuItem>
+                            <MenuItem key={r.codusuario} value={r.codusuario}>
+                                {r.nome}
+                            </MenuItem>
                         ))}
                     </TextField>
-                </Box>
-            )}
+                )}
+            </Box>
             <Box display="flex" justifyContent="space-between" mb={2}>
                 <Button onClick={() => setSemanaAtual(semanaAtual.subtract(1, "week"))}>Semana anterior</Button>
                 <Typography variant="h6">Semana de {diasSemana[0].format("DD/MM")} a {diasSemana[6].format("DD/MM")}</Typography>
