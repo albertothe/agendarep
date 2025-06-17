@@ -44,7 +44,7 @@ router.post('/login', async (req: Request, res: Response) => {
   const loginUpper = login.toUpperCase();
   const senhaHash = crypto
     .createHash('md5')
-    .update(loginUpper + senha.toUpperCase())
+    .update(loginUpper + senha)
     .digest('hex');
 
   try {
