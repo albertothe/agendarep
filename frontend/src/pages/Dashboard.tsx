@@ -1,17 +1,24 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, TextField, MenuItem } from "@mui/material";
 import { People, CalendarMonth, MonetizationOn } from "@mui/icons-material";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 
 export default function Dashboard() {
     const [clientes, setClientes] = useState<any[]>([]);
     const [visitas, setVisitas] = useState<any[]>([]);
     const [potencialTotal, setPotencialTotal] = useState(0);
+    const [representantes, setRepresentantes] = useState<any[]>([]);
+    const [repSelecionado, setRepSelecionado] = useState("");
+    const [perfil, setPerfil] = useState("");
     const token = localStorage.getItem("token");
 
     const carregar = async () => {
+        const params: any = {};
+        if (repSelecionado) params.codusuario = repSelecionado;
         const resClientes = await axios.get("http://localhost:8501/clientes", {
+            params,
             headers: { Authorization: `Bearer ${token}` },
         });
         const dadosClientes = resClientes.data.map((l: any) => ({
@@ -25,16 +32,38 @@ export default function Dashboard() {
 
         const inicio = dayjs().startOf("week").format("YYYY-MM-DD");
         const fim = dayjs().endOf("week").format("YYYY-MM-DD");
+        const paramsVisitas: any = { inicio, fim };
+        if (repSelecionado) paramsVisitas.codusuario = repSelecionado;
         const resVisitas = await axios.get("http://localhost:8501/visitas", {
-            params: { inicio, fim },
+            params: paramsVisitas,
             headers: { Authorization: `Bearer ${token}` },
         });
         setVisitas(resVisitas.data);
     };
 
+    const carregarRepresentantes = async () => {
+        const res = await axios.get(
+            "http://localhost:8501/usuarios/representantes",
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRepresentantes(res.data);
+    };
+
     useEffect(() => {
-        carregar();
-    }, []);
+        if (token) {
+            const data: any = jwtDecode(token);
+            setPerfil(data.perfil);
+            if (data.perfil === "coordenador" || data.perfil === "diretor") {
+                carregarRepresentantes();
+            }
+        }
+    }, [token]);
+
+    useEffect(() => {
+        if (token) {
+            carregar();
+        }
+    }, [token, repSelecionado]);
 
     const qtdClientes = Array.from(
         new Set(clientes.map((c: any) => c.id_cliente))
@@ -64,6 +93,24 @@ export default function Dashboard() {
             <Typography variant="h5" gutterBottom>
                 Painel Geral
             </Typography>
+            {(perfil === "coordenador" || perfil === "diretor") && (
+                <Box mb={2}>
+                    <TextField
+                        select
+                        label="Representante"
+                        value={repSelecionado}
+                        onChange={(e) => setRepSelecionado(e.target.value)}
+                        size="small"
+                    >
+                        <MenuItem value="">Todos</MenuItem>
+                        {representantes.map((r: any) => (
+                            <MenuItem key={r.codusuario} value={r.codusuario}>
+                                {r.nome}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                </Box>
+            )}
 
             <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3}>
                 <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
