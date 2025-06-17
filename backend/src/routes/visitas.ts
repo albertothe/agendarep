@@ -56,6 +56,19 @@ router.put("/:id/confirmar", autenticar, async (req: Request, res: Response) => 
     }
 });
 
+// Atualizar observação de uma visita
+router.put("/:id/observacao", autenticar, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { observacao } = req.body;
+    try {
+        await pool.query("UPDATE agr_visitas SET observacao = $1 WHERE id = $2", [observacao, id]);
+        res.sendStatus(200);
+    } catch (err) {
+        console.error("Erro ao atualizar observação:", err);
+        res.status(500).json({ erro: "Erro ao atualizar observação" });
+    }
+});
+
 // Listar clientes por representante
 router.get("/clientes/representante", autenticar, async (req: Request, res: Response) => {
     const codusuario = (req as any).user?.codusuario;

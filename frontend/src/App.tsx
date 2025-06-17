@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
 import Agenda from "./pages/Agenda";
+import Clientes from "./pages/Clientes";
 
 function App() {
   const token = localStorage.getItem("token");
@@ -22,7 +23,7 @@ function App() {
         />
         <Route
           path="/clientes"
-          element={token ? <Layout><div>Clientes</div></Layout> : <Navigate to="/" />}
+          element={token ? <Layout><Clientes /></Layout> : <Navigate to="/" />}
         />
         <Route
           path="/potenciais"

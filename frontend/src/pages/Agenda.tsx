@@ -31,6 +31,8 @@ const Agenda = () => {
     const [modalAberto, setModalAberto] = useState(false)
     const [novaVisita, setNovaVisita] = useState<any>({})
     const [usarClienteTemporario, setUsarClienteTemporario] = useState(false)
+    const [editarObservacaoId, setEditarObservacaoId] = useState<number | null>(null)
+    const [observacaoEditada, setObservacaoEditada] = useState("")
 
     const token = localStorage.getItem("token")
 
@@ -74,10 +76,20 @@ const Agenda = () => {
         buscarVisitas()
     }
 
-    const confirmarVisita = async (id: number) => {
-        await axios.put(`http://localhost:8501/visitas/${id}/confirmar`, {}, {
+    const confirmarVisita = async (visita: any) => {
+        await axios.put(`http://localhost:8501/visitas/${visita.id}/confirmar`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         })
+        setEditarObservacaoId(visita.id)
+        setObservacaoEditada(visita.observacao || "")
+        buscarVisitas()
+    }
+
+    const salvarObservacao = async (id: number) => {
+        await axios.put(`http://localhost:8501/visitas/${id}/observacao`, { observacao: observacaoEditada }, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        setEditarObservacaoId(null)
         buscarVisitas()
     }
 
@@ -104,7 +116,7 @@ const Agenda = () => {
                         {diasSemana.map((dia, i) => {
                             const data = dia.format("YYYY-MM-DD")
                             const visita = visitas.find((v) =>
-                                dayjs(v.data).format("YYYY-MM-DD") === data && v.hora === hora
+                                dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0,5) === hora
                             )
                             return (
                                 <Box key={i} sx={{ border: "1px solid #ccc", height: 60, position: "relative" }}>
@@ -113,9 +125,22 @@ const Agenda = () => {
                                             <Typography variant="body2" fontWeight="bold">
                                                 {visita.nome_cliente || visita.nome_cliente_temp}
                                             </Typography>
-                                            <Typography variant="body2" fontSize={12}>{visita.observacao}</Typography>
-                                            {!visita.confirmado && (
-                                                <IconButton size="small" onClick={() => confirmarVisita(visita.id)}>
+                                            {editarObservacaoId === visita.id ? (
+                                                <>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        value={observacaoEditada}
+                                                        onChange={(e) => setObservacaoEditada(e.target.value)}
+                                                        sx={{ mb: 1 }}
+                                                    />
+                                                    <Button size="small" variant="contained" onClick={() => salvarObservacao(visita.id)}>Salvar</Button>
+                                                </>
+                                            ) : (
+                                                <Typography variant="body2" fontSize={12}>{visita.observacao}</Typography>
+                                            )}
+                                            {!visita.confirmado && editarObservacaoId !== visita.id && (
+                                                <IconButton size="small" onClick={() => confirmarVisita(visita)}>
                                                     <Check fontSize="small" />
                                                 </IconButton>
                                             )}
@@ -152,7 +177,7 @@ const Agenda = () => {
                             sx={{ mb: 2 }}
                         >
                             {clientes.map((c: any) => (
-                                <MenuItem key={c.id} value={c.id}>{c.nome}</MenuItem>
+                                <MenuItem key={c.id_cliente} value={c.id_cliente}>{c.nome}</MenuItem>
                             ))}
                         </TextField>
                     ) : (
