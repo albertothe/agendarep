@@ -128,7 +128,7 @@ export default function Clientes() {
                                         </IconButton>
                                     </TableCell>
                                     <TableCell>{c.nome}</TableCell>
-                                    <TableCell>{formatarTelefone(c.telefone)}</TableCell>
+                                    <TableCell>{c.telefone}</TableCell>
                                     <TableCell align="right">{c.totalComprado.toFixed(2)}</TableCell>
                                     <TableCell align="right">{c.totalPotencial.toFixed(2)}</TableCell>
                                     <TableCell>
@@ -185,7 +185,7 @@ export default function Clientes() {
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5,10,20]}
+                    rowsPerPageOptions={[5, 10, 20]}
                 />
             </Paper>
         </Box>
