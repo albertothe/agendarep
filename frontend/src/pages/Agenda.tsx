@@ -32,6 +32,8 @@ const Agenda = () => {
     const [novaVisita, setNovaVisita] = useState<any>({})
     const [usarClienteTemporario, setUsarClienteTemporario] = useState(false)
 
+    const token = localStorage.getItem("token")
+
     const diasSemana = [...Array(7)].map((_, i) => semanaAtual.startOf("week").add(i, "day"))
 
     useEffect(() => {
@@ -52,7 +54,7 @@ const Agenda = () => {
     }
 
     const buscarClientes = async () => {
-        const res = await axios.get("http://localhost:8501/clientes/representante", {
+        const res = await axios.get("http://localhost:8501/visitas/clientes/representante", {
             headers: { Authorization: `Bearer ${token}` }
         })
         setClientes(res.data)
