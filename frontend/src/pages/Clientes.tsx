@@ -27,7 +27,8 @@ import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import MenuItem from "@mui/material/MenuItem";
 
-const formatarTelefone = (tel: string) => {
+const formatarTelefone = (tel: string | null | undefined) => {
+    if (!tel) return "";
     const numeros = tel.replace(/\D/g, "");
     if (numeros.length === 11) {
         return numeros.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
@@ -67,7 +68,7 @@ const LinearProgressWithLabel = ({ value }: { value: number }) => (
 interface LinhaCliente {
     id_cliente: string;
     nome_cliente: string;
-    telefone: string;
+    telefone: string | null;
     id_grupo: string;
     nome_grupo: string;
     potencial_compra: number;
