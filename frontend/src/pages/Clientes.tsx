@@ -36,7 +36,12 @@ export default function Clientes() {
         const res = await axios.get("http://localhost:8501/clientes", {
             headers: { Authorization: `Bearer ${token}` },
         });
-        setDados(res.data);
+        const convertidos = res.data.map((linha: any) => ({
+            ...linha,
+            potencial_compra: Number(linha.potencial_compra),
+            valor_comprado: Number(linha.valor_comprado),
+        }));
+        setDados(convertidos);
     };
 
     useEffect(() => {
