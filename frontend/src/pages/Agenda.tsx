@@ -140,7 +140,7 @@ const Agenda = () => {
                                                 <Typography variant="body2" fontSize={12}>{visita.observacao}</Typography>
                                             )}
                                             {!visita.confirmado && editarObservacaoId !== visita.id && (
-                                                <IconButton size="small" onClick={() => confirmarVisita(visita)}>
+                                                <IconButton size="small" onClick={() => confirmarVisita(visita)} sx={{ position: "absolute", bottom: 2, right: 2 }}>
                                                     <Check fontSize="small" />
                                                 </IconButton>
                                             )}
