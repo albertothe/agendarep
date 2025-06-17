@@ -13,12 +13,14 @@ import {
     Collapse,
     IconButton,
     TablePagination,
+    InputAdornment,
 } from "@mui/material";
 import {
     KeyboardArrowDown,
     KeyboardArrowUp,
     ShoppingCart,
     MonetizationOn,
+    Search,
 } from "@mui/icons-material";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -40,6 +42,26 @@ const formatarMoeda = (valor: number) =>
         currency: "BRL",
     });
 
+const LinearProgressWithLabel = ({ value }: { value: number }) => (
+    <Box position="relative">
+        <LinearProgress variant="determinate" value={value} />
+        <Box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+        >
+            <Typography variant="caption" color="text.secondary">
+                {`${Math.round(value)}%`}
+            </Typography>
+        </Box>
+    </Box>
+);
+
 interface LinhaCliente {
     id_cliente: string;
     nome_cliente: string;
@@ -53,7 +75,7 @@ interface LinhaCliente {
 export default function Clientes() {
     const [dados, setDados] = useState<LinhaCliente[]>([]);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(15);
     const [busca, setBusca] = useState("");
     const [abertos, setAbertos] = useState<Record<string, boolean>>({});
     const token = localStorage.getItem("token");
@@ -127,10 +149,17 @@ export default function Clientes() {
             <Typography variant="h5" gutterBottom>Clientes</Typography>
             <TextField
                 size="small"
-                placeholder="Buscar"
+                placeholder="Buscar por nome ou telefone"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 sx={{ mb: 1 }}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <Search fontSize="small" />
+                        </InputAdornment>
+                    ),
+                }}
             />
             <Paper>
                 <Table size="small">
@@ -161,22 +190,22 @@ export default function Clientes() {
                                     </TableCell>
                                     <TableCell>{c.nome}</TableCell>
                                     <TableCell>{c.telefone}</TableCell>
-                                    <TableCell align="right">
-                                        <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
-                                        {formatarMoeda(c.totalComprado)}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
-                                        {formatarMoeda(c.totalPotencial)}
-                                    </TableCell>
+                                    <TableCell align="right">{formatarMoeda(c.totalComprado)}</TableCell>
+                                    <TableCell align="right">{formatarMoeda(c.totalPotencial)}</TableCell>
                                     <TableCell>
-                                        <LinearProgress variant="determinate" value={c.totalPotencial ? (c.totalComprado / c.totalPotencial) * 100 : 0} />
+                                        <LinearProgressWithLabel
+                                            value={
+                                                c.totalPotencial
+                                                    ? (c.totalComprado / c.totalPotencial) * 100
+                                                    : 0
+                                            }
+                                        />
                                     </TableCell>
                                 </TableRow>
                                 <TableRow>
                                     <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
                                         <Collapse in={abertos[c.id_cliente]} timeout="auto" unmountOnExit>
-                                            <Table size="small" sx={{ mt: 1 }}>
+                                            <Table size="small" sx={{ mt: 1, bgcolor: "#fafafa", p: 1 }}>
                                                 <TableHead>
                                                     <TableRow>
                                                         <TableCell>Grupo</TableCell>
@@ -196,23 +225,23 @@ export default function Clientes() {
                                                     {c.grupos.map((linha: any) => (
                                                         <TableRow key={`${linha.id_cliente}-${linha.id_grupo}`}>
                                                             <TableCell>{linha.nome_grupo}</TableCell>
+                                                            <TableCell align="right">{formatarMoeda(linha.valor_comprado)}</TableCell>
                                                             <TableCell align="right">
-                                                                <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
-                                                                {formatarMoeda(linha.valor_comprado)}
-                                                            </TableCell>
-                                                            <TableCell align="right">
-                                                                <Box display="flex" alignItems="center">
-                                                                    <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
-                                                                    <TextField
-                                                                        size="small"
-                                                                        type="number"
-                                                                        value={linha.potencial_compra}
-                                                                        onChange={(e) => handleChange(linha.index, e.target.value)}
-                                                                    />
-                                                                </Box>
+                                                                <TextField
+                                                                    size="small"
+                                                                    type="number"
+                                                                    value={linha.potencial_compra}
+                                                                    onChange={(e) => handleChange(linha.index, e.target.value)}
+                                                                />
                                                             </TableCell>
                                                             <TableCell>
-                                                                <LinearProgress variant="determinate" value={linha.potencial_compra ? (linha.valor_comprado / linha.potencial_compra) * 100 : 0} />
+                                                                <LinearProgressWithLabel
+                                                                    value={
+                                                                        linha.potencial_compra
+                                                                            ? (linha.valor_comprado / linha.potencial_compra) * 100
+                                                                            : 0
+                                                                    }
+                                                                />
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Button size="small" variant="contained" onClick={() => salvar(linha)}>Salvar</Button>
@@ -235,7 +264,7 @@ export default function Clientes() {
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 20]}
+                    rowsPerPageOptions={[15, 30, 50]}
                 />
             </Paper>
         </Box>
