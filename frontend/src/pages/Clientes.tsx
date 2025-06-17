@@ -24,6 +24,8 @@ import {
 } from "@mui/icons-material";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
+import MenuItem from "@mui/material/MenuItem";
 
 const formatarTelefone = (tel: string) => {
     const numeros = tel.replace(/\D/g, "");
@@ -78,10 +80,16 @@ export default function Clientes() {
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [busca, setBusca] = useState("");
     const [abertos, setAbertos] = useState<Record<string, boolean>>({});
+    const [representantes, setRepresentantes] = useState<any[]>([]);
+    const [repSelecionado, setRepSelecionado] = useState("");
+    const [perfil, setPerfil] = useState("");
     const token = localStorage.getItem("token");
 
     const carregar = async () => {
+        const params: any = {};
+        if (repSelecionado) params.codusuario = repSelecionado;
         const res = await axios.get("http://localhost:8501/clientes", {
+            params,
             headers: { Authorization: `Bearer ${token}` },
         });
         const convertidos = res.data.map((linha: any) => ({
@@ -92,9 +100,29 @@ export default function Clientes() {
         setDados(convertidos);
     };
 
+    const carregarRepresentantes = async () => {
+        const res = await axios.get(
+            "http://localhost:8501/usuarios/representantes",
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRepresentantes(res.data);
+    };
+
     useEffect(() => {
-        carregar();
-    }, []);
+        if (token) {
+            const data: any = jwtDecode(token);
+            setPerfil(data.perfil);
+            if (data.perfil === "coordenador" || data.perfil === "diretor") {
+                carregarRepresentantes();
+            }
+        }
+    }, [token]);
+
+    useEffect(() => {
+        if (token) {
+            carregar();
+        }
+    }, [token, repSelecionado]);
 
     const clientes = Object.values(
         dados.reduce((acc: any, linha, index) => {
@@ -147,6 +175,24 @@ export default function Clientes() {
     return (
         <Box>
             <Typography variant="h5" gutterBottom>Clientes</Typography>
+            {(perfil === "coordenador" || perfil === "diretor") && (
+                <Box mb={1}>
+                    <TextField
+                        select
+                        label="Representante"
+                        value={repSelecionado}
+                        onChange={(e) => setRepSelecionado(e.target.value)}
+                        size="small"
+                    >
+                        <MenuItem value="">Todos</MenuItem>
+                        {representantes.map((r: any) => (
+                            <MenuItem key={r.codusuario} value={r.codusuario}>
+                                {r.nome}
+                            </MenuItem>
+                        ))}
+                    </TextField>
+                </Box>
+            )}
             <TextField
                 size="small"
                 placeholder="Buscar por nome ou telefone"
