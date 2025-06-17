@@ -46,10 +46,18 @@ export default function Dashboard() {
             currency: "BRL",
         });
 
-    const atividades = [
-        "Visita confirmada com Innovatech Solutions em 28/07/2024",
-        "Visita agendada com New Lead Co. em 30/07/2024",
-    ];
+    const atividades = visitas
+        .slice()
+        .sort((a, b) =>
+            dayjs(`${b.data} ${b.hora}`).diff(dayjs(`${a.data} ${a.hora}`))
+        )
+        .map((v) => {
+            const nome = v.nome_cliente || v.nome_cliente_temp;
+            const dataFormatada = dayjs(v.data).format("DD/MM/YYYY");
+            return v.confirmado
+                ? `Visita confirmada com ${nome} em ${dataFormatada}`
+                : `Visita agendada com ${nome} em ${dataFormatada}`;
+        });
 
     return (
         <Box>
