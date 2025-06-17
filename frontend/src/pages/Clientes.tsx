@@ -1,5 +1,25 @@
-import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, LinearProgress, Button, Paper, Collapse, IconButton, TablePagination } from "@mui/material";
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import {
+    Box,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    TextField,
+    LinearProgress,
+    Button,
+    Paper,
+    Collapse,
+    IconButton,
+    TablePagination,
+} from "@mui/material";
+import {
+    KeyboardArrowDown,
+    KeyboardArrowUp,
+    ShoppingCart,
+    MonetizationOn,
+} from "@mui/icons-material";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
@@ -13,6 +33,12 @@ const formatarTelefone = (tel: string) => {
     }
     return tel;
 };
+
+const formatarMoeda = (valor: number) =>
+    valor.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    });
 
 interface LinhaCliente {
     id_cliente: string;
@@ -113,8 +139,14 @@ export default function Clientes() {
                             <TableCell width="50"></TableCell>
                             <TableCell>Cliente</TableCell>
                             <TableCell>Telefone</TableCell>
-                            <TableCell align="right">Comprado</TableCell>
-                            <TableCell align="right">Potencial</TableCell>
+                            <TableCell align="right">
+                                <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
+                                Comprado
+                            </TableCell>
+                            <TableCell align="right">
+                                <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
+                                Potencial
+                            </TableCell>
                             <TableCell width="150">Progresso</TableCell>
                         </TableRow>
                     </TableHead>
@@ -129,8 +161,14 @@ export default function Clientes() {
                                     </TableCell>
                                     <TableCell>{c.nome}</TableCell>
                                     <TableCell>{c.telefone}</TableCell>
-                                    <TableCell align="right">{c.totalComprado.toFixed(2)}</TableCell>
-                                    <TableCell align="right">{c.totalPotencial.toFixed(2)}</TableCell>
+                                    <TableCell align="right">
+                                        <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
+                                        {formatarMoeda(c.totalComprado)}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
+                                        {formatarMoeda(c.totalPotencial)}
+                                    </TableCell>
                                     <TableCell>
                                         <LinearProgress variant="determinate" value={c.totalPotencial ? (c.totalComprado / c.totalPotencial) * 100 : 0} />
                                     </TableCell>
@@ -142,8 +180,14 @@ export default function Clientes() {
                                                 <TableHead>
                                                     <TableRow>
                                                         <TableCell>Grupo</TableCell>
-                                                        <TableCell align="right">Comprado</TableCell>
-                                                        <TableCell align="right">Potencial</TableCell>
+                                                        <TableCell align="right">
+                                                            <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
+                                                            Comprado
+                                                        </TableCell>
+                                                        <TableCell align="right">
+                                                            <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
+                                                            Potencial
+                                                        </TableCell>
                                                         <TableCell width="150">Progresso</TableCell>
                                                         <TableCell></TableCell>
                                                     </TableRow>
@@ -152,14 +196,20 @@ export default function Clientes() {
                                                     {c.grupos.map((linha: any) => (
                                                         <TableRow key={`${linha.id_cliente}-${linha.id_grupo}`}>
                                                             <TableCell>{linha.nome_grupo}</TableCell>
-                                                            <TableCell align="right">{linha.valor_comprado}</TableCell>
                                                             <TableCell align="right">
-                                                                <TextField
-                                                                    size="small"
-                                                                    type="number"
-                                                                    value={linha.potencial_compra}
-                                                                    onChange={(e) => handleChange(linha.index, e.target.value)}
-                                                                />
+                                                                <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
+                                                                {formatarMoeda(linha.valor_comprado)}
+                                                            </TableCell>
+                                                            <TableCell align="right">
+                                                                <Box display="flex" alignItems="center">
+                                                                    <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
+                                                                    <TextField
+                                                                        size="small"
+                                                                        type="number"
+                                                                        value={linha.potencial_compra}
+                                                                        onChange={(e) => handleChange(linha.index, e.target.value)}
+                                                                    />
+                                                                </Box>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <LinearProgress variant="determinate" value={linha.potencial_compra ? (linha.valor_comprado / linha.potencial_compra) * 100 : 0} />
