@@ -9,7 +9,7 @@ router.get("/", autenticar, async (req: Request, res: Response) => {
     const codusuario = (req as any).user?.codusuario;
     try {
         const { rows } = await pool.query(
-            `SELECT c.id_cliente, c.nome AS nome_cliente, g.id_grupo, g.nome AS nome_grupo,
+            `SELECT c.id_cliente, c.nome AS nome_cliente, c.telefone, g.id_grupo, g.nome AS nome_grupo,
                     cg.potencial_compra, cg.valor_comprado
              FROM agr_clientes c
              LEFT JOIN agr_cliente_grupo cg ON c.id_cliente = cg.id_cliente

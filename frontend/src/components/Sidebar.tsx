@@ -18,7 +18,8 @@ import {
     CalendarMonth,
     Settings,
     Logout,
-    KeyboardArrowDown
+    KeyboardArrowDown,
+    People
 } from "@mui/icons-material"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState } from "react"
@@ -41,7 +42,7 @@ const Sidebar = () => {
     const menu = [
         { texto: "Painel", icone: <Home />, rota: "/dashboard" },
         { texto: "Agenda Semanal", icone: <CalendarMonth />, rota: "/agenda" },
-        { texto: "Clientes", icone: <Settings />, rota: "/clientes" },
+        { texto: "Clientes", icone: <People />, rota: "/clientes" },
         { texto: "Sugestões de Visita", icone: <Settings />, rota: "/sugestoes" },
     ]
 

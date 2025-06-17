@@ -3,9 +3,21 @@ import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
+const formatarTelefone = (tel: string) => {
+    const numeros = tel.replace(/\D/g, "");
+    if (numeros.length === 11) {
+        return numeros.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    }
+    if (numeros.length === 10) {
+        return numeros.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+    }
+    return tel;
+};
+
 interface LinhaCliente {
     id_cliente: string;
     nome_cliente: string;
+    telefone: string;
     id_grupo: string;
     nome_grupo: string;
     potencial_compra: number;
@@ -15,7 +27,8 @@ interface LinhaCliente {
 export default function Clientes() {
     const [dados, setDados] = useState<LinhaCliente[]>([]);
     const [page, setPage] = useState(0);
-    const rowsPerPage = 10;
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [busca, setBusca] = useState("");
     const [abertos, setAbertos] = useState<Record<string, boolean>>({});
     const token = localStorage.getItem("token");
 
@@ -36,12 +49,22 @@ export default function Clientes() {
                 acc[linha.id_cliente] = {
                     id_cliente: linha.id_cliente,
                     nome: linha.nome_cliente,
+                    telefone: linha.telefone,
                     grupos: [],
+                    totalPotencial: 0,
+                    totalComprado: 0,
                 };
             }
             acc[linha.id_cliente].grupos.push({ ...linha, index });
+            acc[linha.id_cliente].totalPotencial += linha.potencial_compra;
+            acc[linha.id_cliente].totalComprado += linha.valor_comprado;
             return acc;
         }, {})
+    ) as any[];
+
+    const clientesFiltrados = clientes.filter((c: any) =>
+        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+        formatarTelefone(c.telefone).includes(busca)
     );
 
     const handleChange = (index: number, valor: string) => {
@@ -63,19 +86,35 @@ export default function Clientes() {
         setPage(newPage);
     };
 
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
     return (
         <Box>
             <Typography variant="h5" gutterBottom>Clientes</Typography>
+            <TextField
+                size="small"
+                placeholder="Buscar"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                sx={{ mb: 1 }}
+            />
             <Paper>
                 <Table size="small">
                     <TableHead>
                         <TableRow>
                             <TableCell width="50"></TableCell>
                             <TableCell>Cliente</TableCell>
+                            <TableCell>Telefone</TableCell>
+                            <TableCell align="right">Comprado</TableCell>
+                            <TableCell align="right">Potencial</TableCell>
+                            <TableCell width="150">Progresso</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {clientes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((c) => (
+                        {clientesFiltrados.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((c: any) => (
                             <>
                                 <TableRow hover key={c.id_cliente} onClick={() => setAbertos({ ...abertos, [c.id_cliente]: !abertos[c.id_cliente] })}>
                                     <TableCell>
@@ -84,9 +123,15 @@ export default function Clientes() {
                                         </IconButton>
                                     </TableCell>
                                     <TableCell>{c.nome}</TableCell>
+                                    <TableCell>{formatarTelefone(c.telefone)}</TableCell>
+                                    <TableCell align="right">{c.totalComprado.toFixed(2)}</TableCell>
+                                    <TableCell align="right">{c.totalPotencial.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        <LinearProgress variant="determinate" value={c.totalPotencial ? (c.totalComprado / c.totalPotencial) * 100 : 0} />
+                                    </TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={2}>
+                                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
                                         <Collapse in={abertos[c.id_cliente]} timeout="auto" unmountOnExit>
                                             <Table size="small" sx={{ mt: 1 }}>
                                                 <TableHead>
@@ -130,11 +175,12 @@ export default function Clientes() {
                 </Table>
                 <TablePagination
                     component="div"
-                    count={clientes.length}
+                    count={clientesFiltrados.length}
                     page={page}
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
-                    rowsPerPageOptions={[]}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5,10,20]}
                 />
             </Paper>
         </Box>

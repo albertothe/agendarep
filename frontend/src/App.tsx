@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
 import Agenda from "./pages/Agenda";
 import Clientes from "./pages/Clientes";
+import Sugestoes from "./pages/Sugestoes";
 
 function App() {
   const token = localStorage.getItem("token");
@@ -26,8 +27,8 @@ function App() {
           element={token ? <Layout><Clientes /></Layout> : <Navigate to="/" />}
         />
         <Route
-          path="/potenciais"
-          element={token ? <Layout><div>Sugestões de Visita</div></Layout> : <Navigate to="/" />}
+          path="/sugestoes"
+          element={token ? <Layout><Sugestoes /></Layout> : <Navigate to="/" />}
         />
       </Routes>
     </BrowserRouter>
