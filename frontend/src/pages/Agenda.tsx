@@ -1,6 +1,6 @@
 // frontend/src/pages/Agenda.tsx
 import React, { useEffect, useState } from "react"
-import jwtDecode from "jwt-decode"
+import { jwtDecode } from "jwt-decode";
 import axios from "axios"
 import dayjs from "dayjs"
 import "dayjs/locale/pt-br"
@@ -159,7 +159,7 @@ const Agenda = () => {
                         {diasSemana.map((dia, i) => {
                             const data = dia.format("YYYY-MM-DD")
                             const visitasHorario = visitas.filter(
-                                (v) => dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0,5) === hora
+                                (v) => dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0, 5) === hora
                             )
                             const visita = visitasHorario[0]
                             return (
