@@ -103,7 +103,9 @@ const Agenda = () => {
                         <Box sx={{ border: "1px solid #ccc", textAlign: "center" }}>{hora}</Box>
                         {diasSemana.map((dia, i) => {
                             const data = dia.format("YYYY-MM-DD")
-                            const visita = visitas.find((v) => v.data === data && v.hora === hora)
+                            const visita = visitas.find((v) =>
+                                dayjs(v.data).format("YYYY-MM-DD") === data && v.hora === hora
+                            )
                             return (
                                 <Box key={i} sx={{ border: "1px solid #ccc", height: 60, position: "relative" }}>
                                     {visita ? (
