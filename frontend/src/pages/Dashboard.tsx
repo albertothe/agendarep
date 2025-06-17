@@ -90,17 +90,24 @@ export default function Dashboard() {
 
     return (
         <Box>
-            <Typography variant="h5" gutterBottom>
-                Painel Geral
-            </Typography>
-            {(perfil === "coordenador" || perfil === "diretor") && (
-                <Box mb={2}>
+            <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                mb={2}
+            >
+                <Typography variant="h5" gutterBottom sx={{ mr: 2 }}>
+                    Painel Geral
+                </Typography>
+                {(perfil === "coordenador" || perfil === "diretor") && (
                     <TextField
                         select
                         label="Representante"
                         value={repSelecionado}
                         onChange={(e) => setRepSelecionado(e.target.value)}
                         size="small"
+                        sx={{ minWidth: 200, mt: { xs: 1, sm: 0 } }}
                     >
                         <MenuItem value="">Todos</MenuItem>
                         {representantes.map((r: any) => (
@@ -109,8 +116,8 @@ export default function Dashboard() {
                             </MenuItem>
                         ))}
                     </TextField>
-                </Box>
-            )}
+                )}
+            </Box>
 
             <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3}>
                 <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
