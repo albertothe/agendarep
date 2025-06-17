@@ -31,8 +31,8 @@ const Agenda = () => {
     const [modalAberto, setModalAberto] = useState(false)
     const [novaVisita, setNovaVisita] = useState<any>({})
     const [usarClienteTemporario, setUsarClienteTemporario] = useState(false)
-    const [editarObservacaoId, setEditarObservacaoId] = useState<number | null>(null)
     const [observacaoEditada, setObservacaoEditada] = useState("")
+    const [visitaParaConfirmar, setVisitaParaConfirmar] = useState<any | null>(null)
 
     const token = localStorage.getItem("token")
 
@@ -76,22 +76,23 @@ const Agenda = () => {
         buscarVisitas()
     }
 
-    const confirmarVisita = async (visita: any) => {
-        await axios.put(`http://localhost:8501/visitas/${visita.id}/confirmar`, {}, {
+    const abrirModalConfirmar = (visita: any) => {
+        setVisitaParaConfirmar(visita)
+        setObservacaoEditada(visita.observacao || "")
+    }
+
+    const confirmarVisita = async () => {
+        if (!visitaParaConfirmar) return
+        await axios.put(`http://localhost:8501/visitas/${visitaParaConfirmar.id}/observacao`, { observacao: observacaoEditada }, {
             headers: { Authorization: `Bearer ${token}` }
         })
-        setEditarObservacaoId(visita.id)
-        setObservacaoEditada(visita.observacao || "")
+        await axios.put(`http://localhost:8501/visitas/${visitaParaConfirmar.id}/confirmar`, {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        setVisitaParaConfirmar(null)
         buscarVisitas()
     }
 
-    const salvarObservacao = async (id: number) => {
-        await axios.put(`http://localhost:8501/visitas/${id}/observacao`, { observacao: observacaoEditada }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        setEditarObservacaoId(null)
-        buscarVisitas()
-    }
 
     return (
         <Box p={2}>
@@ -119,28 +120,15 @@ const Agenda = () => {
                                 dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0,5) === hora
                             )
                             return (
-                                <Box key={i} sx={{ border: "1px solid #ccc", height: 60, position: "relative" }}>
+                                <Box key={i} sx={{ border: "1px solid #ccc", position: "relative", minHeight: 70, bgcolor: visita ? (visita.confirmado ? "#e8f5e9" : "#e3f2fd") : "inherit" }}>
                                     {visita ? (
-                                        <Box p={1}>
-                                            <Typography variant="body2" fontWeight="bold">
+                                        <Box p={1} sx={{ fontSize: 12, lineHeight: 1.2 }}>
+                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: 12 }}>
                                                 {visita.nome_cliente || visita.nome_cliente_temp}
                                             </Typography>
-                                            {editarObservacaoId === visita.id ? (
-                                                <>
-                                                    <TextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={observacaoEditada}
-                                                        onChange={(e) => setObservacaoEditada(e.target.value)}
-                                                        sx={{ mb: 1 }}
-                                                    />
-                                                    <Button size="small" variant="contained" onClick={() => salvarObservacao(visita.id)}>Salvar</Button>
-                                                </>
-                                            ) : (
-                                                <Typography variant="body2" fontSize={12}>{visita.observacao}</Typography>
-                                            )}
-                                            {!visita.confirmado && editarObservacaoId !== visita.id && (
-                                                <IconButton size="small" onClick={() => confirmarVisita(visita)} sx={{ position: "absolute", bottom: 2, right: 2 }}>
+                                            <Typography variant="body2" fontSize={12} sx={{ wordBreak: "break-word" }}>{visita.observacao}</Typography>
+                                            {!visita.confirmado && (
+                                                <IconButton size="small" onClick={() => abrirModalConfirmar(visita)} sx={{ position: "absolute", bottom: 2, right: 2 }}>
                                                     <Check fontSize="small" />
                                                 </IconButton>
                                             )}
@@ -207,6 +195,20 @@ const Agenda = () => {
                         sx={{ mb: 2 }}
                     />
                     <Button fullWidth variant="contained" onClick={salvarVisita}>Salvar</Button>
+                </Box>
+            </Modal>
+
+            <Modal open={Boolean(visitaParaConfirmar)} onClose={() => setVisitaParaConfirmar(null)}>
+                <Box p={3} bgcolor="#fff" width={400} mx="auto" mt={10} borderRadius={2}>
+                    <Typography variant="h6" mb={2}>Confirmar Visita</Typography>
+                    <TextField
+                        fullWidth
+                        label="Observação"
+                        value={observacaoEditada}
+                        onChange={(e) => setObservacaoEditada(e.target.value)}
+                        sx={{ mb: 2 }}
+                    />
+                    <Button fullWidth variant="contained" onClick={confirmarVisita}>Confirmar</Button>
                 </Box>
             </Modal>
         </Box>
