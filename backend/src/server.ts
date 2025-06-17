@@ -5,6 +5,7 @@ import dotenv from "dotenv"
 import authRoutes from "./routes/auth"
 import visitasRoutes from "./routes/visitas"
 import clientesRoutes from "./routes/clientes"
+import usuariosRoutes from "./routes/usuarios"
 
 dotenv.config()
 
@@ -17,6 +18,7 @@ app.use(express.json())
 app.use("/auth", authRoutes)
 app.use("/visitas", visitasRoutes)
 app.use("/clientes", clientesRoutes)
+app.use("/usuarios", usuariosRoutes)
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`)

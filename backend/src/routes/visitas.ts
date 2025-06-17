@@ -7,18 +7,36 @@ const router = Router();
 
 // Listar visitas entre duas datas
 router.get("/", autenticar, async (req: Request, res: Response) => {
-    const { inicio, fim } = req.query;
-    const codusuario = (req as any).user?.codusuario;
+    const { inicio, fim, codusuario: codParam } = req.query as any;
+    const { codusuario, perfil } = (req as any).user || {};
 
     try {
-        const { rows } = await pool.query(
-            `SELECT v.*, c.nome AS nome_cliente
-       FROM agr_visitas v
-       LEFT JOIN agr_clientes c ON v.id_cliente = c.id_cliente
-       WHERE v.codusuario = $1 AND v.data BETWEEN $2 AND $3
-       ORDER BY v.data, v.hora`,
-            [codusuario, inicio, fim]
-        );
+        let query = `SELECT v.*, c.nome AS nome_cliente, u.nome AS nome_representante
+            FROM agr_visitas v
+            LEFT JOIN agr_clientes c ON v.id_cliente = c.id_cliente
+            LEFT JOIN agr_usuarios u ON v.codusuario = u.codusuario
+            WHERE v.data BETWEEN $1 AND $2`;
+        const params: any[] = [inicio, fim];
+
+        if (perfil === "representante") {
+            query += " AND v.codusuario = $3";
+            params.push(codusuario);
+        } else if (perfil === "coordenador") {
+            if (codParam) {
+                query += " AND v.codusuario = $3";
+                params.push(codParam);
+            } else {
+                query += " AND u.coordenador_id = $3";
+                params.push(codusuario);
+            }
+        } else if (perfil === "diretor" && codParam) {
+            query += " AND v.codusuario = $3";
+            params.push(codParam);
+        }
+
+        query += " ORDER BY v.data, v.hora";
+
+        const { rows } = await pool.query(query, params);
         res.json(rows);
     } catch (err) {
         console.error("Erro ao buscar visitas:", err);
@@ -71,11 +89,13 @@ router.put("/:id/observacao", autenticar, async (req: Request, res: Response) =>
 
 // Listar clientes por representante
 router.get("/clientes/representante", autenticar, async (req: Request, res: Response) => {
-    const codusuario = (req as any).user?.codusuario;
+    const { codusuario: codParam } = req.query as any;
+    const { codusuario, perfil } = (req as any).user || {};
+    const rep = (perfil === "coordenador" || perfil === "diretor") && codParam ? codParam : codusuario;
     try {
         const { rows } = await pool.query(
             `SELECT id_cliente, nome FROM agr_clientes WHERE cod_representante = $1`,
-            [codusuario]
+            [rep]
         );
         res.json(rows);
     } catch (err) {
