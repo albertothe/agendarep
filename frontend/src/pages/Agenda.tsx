@@ -1,6 +1,7 @@
-// frontend/src/pages/Agenda.tsx
-import React, { useEffect, useState } from "react"
-import { jwtDecode } from "jwt-decode";
+"use client"
+
+import { useEffect, useState } from "react"
+import { jwtDecode } from "jwt-decode"
 import axios from "axios"
 import dayjs from "dayjs"
 import "dayjs/locale/pt-br"
@@ -14,16 +15,18 @@ import {
     MenuItem,
     Paper,
     Switch,
-    FormControlLabel
+    FormControlLabel,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
 } from "@mui/material"
-import { Add, Check } from "@mui/icons-material"
+import { Add, Check, CalendarMonth } from "@mui/icons-material"
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL
 
-const horas = [
-    "08:00", "09:00", "10:00", "11:00", "12:00",
-    "13:00", "14:00", "15:00", "16:00", "17:00"
-]
+const horas = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
 
 dayjs.locale("pt-br")
 
@@ -68,7 +71,7 @@ const Agenda = () => {
         if (repSelecionado) params.codusuario = repSelecionado
         const res = await axios.get(`${API}/visitas`, {
             params,
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
         setVisitas(res.data)
     }
@@ -78,14 +81,14 @@ const Agenda = () => {
         if (repSelecionado) params.codusuario = repSelecionado
         const res = await axios.get(`${API}/visitas/clientes/representante`, {
             params,
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
         setClientes(res.data)
     }
 
     const carregarRepresentantes = async () => {
         const res = await axios.get(`${API}/usuarios/representantes`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
     }
@@ -98,7 +101,7 @@ const Agenda = () => {
 
     const salvarVisita = async () => {
         await axios.post(`${API}/visitas`, novaVisita, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
         setModalAberto(false)
         buscarVisitas()
@@ -111,108 +114,292 @@ const Agenda = () => {
 
     const confirmarVisita = async () => {
         if (!visitaParaConfirmar) return
-        await axios.put(`${API}/visitas/${visitaParaConfirmar.id}/observacao`, { observacao: observacaoEditada }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        await axios.put(`${API}/visitas/${visitaParaConfirmar.id}/confirmar`, {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        await axios.put(
+            `${API}/visitas/${visitaParaConfirmar.id}/observacao`,
+            { observacao: observacaoEditada },
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            },
+        )
+        await axios.put(
+            `${API}/visitas/${visitaParaConfirmar.id}/confirmar`,
+            {},
+            {
+                headers: { Authorization: `Bearer ${token}` },
+            },
+        )
         setVisitaParaConfirmar(null)
         buscarVisitas()
     }
 
+    const formatarTituloSemana = () => {
+        const inicio = diasSemana[0]
+        const fim = diasSemana[6]
+        const mesInicio = inicio.format("MMMM")
+        const mesFim = fim.format("MMMM")
+        const anoInicio = inicio.format("YYYY")
+        const anoFim = fim.format("YYYY")
+
+        if (mesInicio === mesFim && anoInicio === anoFim) {
+            return `Semana De ${mesInicio} ${inicio.format("DD")}, ${anoInicio}`
+        }
+        return `Semana De ${inicio.format("MMMM DD")} a ${fim.format("MMMM DD, YYYY")}`
+    }
+
+    const formatarDiaSemana = (dia: dayjs.Dayjs) => {
+        const nomesDias = {
+            sunday: "Domingo",
+            monday: "Segunda",
+            tuesday: "Terça",
+            wednesday: "Quarta",
+            thursday: "Quinta",
+            friday: "Sexta",
+            saturday: "Sábado",
+        }
+        const diaSemana = nomesDias[dia.format("dddd") as keyof typeof nomesDias]
+        return `${diaSemana}, ${dia.format("MMM DD")}`
+    }
 
     return (
-        <Box p={2}>
-            <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                flexWrap="wrap"
-                mb={2}
-            >
-                <Typography variant="h5" gutterBottom>
-                    Agenda Semanal
+        <Box sx={{ p: 3 }}>
+            {/* Header */}
+            <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <CalendarMonth sx={{ color: "#6366f1", mr: 1, fontSize: 28 }} />
+                    <Typography variant="h4" sx={{ fontWeight: 600, color: "#1f2937" }}>
+                        Agenda Semanal de Visitas
+                    </Typography>
+                </Box>
+                <Typography variant="body1" color="text.secondary">
+                    Gerencie suas visitas a clientes para a semana. Clique em um horário para agendar uma nova visita ou ver
+                    detalhes de uma existente.
                 </Typography>
-                {(perfil === "coordenador" || perfil === "diretor") && (
+            </Box>
+
+            {/* Filtro de representantes */}
+            {(perfil === "coordenador" || perfil === "diretor") && (
+                <Box sx={{ mb: 3 }}>
                     <TextField
                         select
                         label="Representante"
                         value={repSelecionado}
                         onChange={(e) => setRepSelecionado(e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 200, mt: { xs: 1, sm: 0 } }}
+                        sx={{ minWidth: 200 }}
                     >
-                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="">Todos os Representantes</MenuItem>
                         {representantes.map((r: any) => (
                             <MenuItem key={r.codusuario} value={r.codusuario}>
                                 {r.nome}
                             </MenuItem>
                         ))}
                     </TextField>
-                )}
-            </Box>
-            <Box display="flex" justifyContent="space-between" mb={2}>
-                <Button onClick={() => setSemanaAtual(semanaAtual.subtract(1, "week"))}>Semana anterior</Button>
-                <Typography variant="h6">Semana de {diasSemana[0].format("DD/MM")} a {diasSemana[6].format("DD/MM")}</Typography>
-                <Button onClick={() => setSemanaAtual(semanaAtual.add(1, "week"))}>Próxima semana</Button>
+                </Box>
+            )}
+
+            {/* Controles de navegação */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                <Button
+                    variant="contained"
+                    onClick={() => setSemanaAtual(semanaAtual.subtract(1, "week"))}
+                    sx={{ bgcolor: "#6366f1", "&:hover": { bgcolor: "#5856eb" } }}
+                >
+                    Semana Anterior
+                </Button>
+
+                <Typography variant="h6" sx={{ fontWeight: 600, color: "#1f2937", textTransform: "capitalize" }}>
+                    {formatarTituloSemana()}
+                </Typography>
+
+                <Button
+                    variant="contained"
+                    onClick={() => setSemanaAtual(semanaAtual.add(1, "week"))}
+                    sx={{ bgcolor: "#6366f1", "&:hover": { bgcolor: "#5856eb" } }}
+                >
+                    Próxima Semana
+                </Button>
             </Box>
 
-            <Box display="grid" gridTemplateColumns="100px repeat(7, 1fr)" gap={1}>
-                <Box></Box>
-                {diasSemana.map((dia, i) => (
-                    <Paper key={i} sx={{ p: 1, textAlign: "center" }}>
-                        <Typography fontWeight="bold">{dia.format("dddd")}</Typography>
-                        <Typography variant="body2">{dia.format("DD/MM")}</Typography>
-                    </Paper>
-                ))}
+            {/* Grid da agenda */}
+            <Paper elevation={0} sx={{ border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                <Table sx={{ minWidth: 800 }}>
+                    <TableHead>
+                        <TableRow sx={{ bgcolor: "#f9fafb" }}>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151", width: 100, textAlign: "center" }}>Hora</TableCell>
+                            {diasSemana.map((dia, i) => (
+                                <TableCell key={i} sx={{ fontWeight: 600, color: "#374151", textAlign: "center", minWidth: 150 }}>
+                                    {formatarDiaSemana(dia)}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {horas.map((hora) => (
+                            <TableRow key={hora}>
+                                <TableCell
+                                    sx={{
+                                        bgcolor: "#f8fafc",
+                                        fontWeight: 600,
+                                        color: "#6b7280",
+                                        textAlign: "center",
+                                        borderRight: "1px solid #e5e7eb",
+                                    }}
+                                >
+                                    {hora}
+                                </TableCell>
+                                {diasSemana.map((dia, i) => {
+                                    const data = dia.format("YYYY-MM-DD")
+                                    const visitasHorario = visitas.filter(
+                                        (v) => dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0, 5) === hora,
+                                    )
+                                    const visita = visitasHorario[0]
 
-                {horas.map((hora) => (
-                    <React.Fragment key={hora}>
-                        <Box sx={{ border: "1px solid #ccc", textAlign: "center" }}>{hora}</Box>
-                        {diasSemana.map((dia, i) => {
-                            const data = dia.format("YYYY-MM-DD")
-                            const visitasHorario = visitas.filter(
-                                (v) => dayjs(v.data).format("YYYY-MM-DD") === data && String(v.hora).slice(0, 5) === hora
-                            )
-                            const visita = visitasHorario[0]
-                            return (
-                                <Box key={i} sx={{ border: "1px solid #ccc", position: "relative", minHeight: 70, bgcolor: visita ? (visita.confirmado ? "#e8f5e9" : "#e3f2fd") : "inherit" }}>
-                                    {visita ? (
-                                        <Box p={1} sx={{ fontSize: 12, lineHeight: 1.2 }}>
-                                            <Typography variant="body2" fontWeight="bold" sx={{ fontSize: 12 }}>
-                                                {visita.nome_cliente || visita.nome_cliente_temp}
-                                            </Typography>
-                                            <Typography variant="body2" fontSize={12} sx={{ wordBreak: "break-word" }}>{visita.observacao}</Typography>
-                                            {visitasHorario.length > 1 && (
-                                                <Typography variant="caption" sx={{ position: "absolute", top: 2, right: 2 }}>
-                                                    +{visitasHorario.length - 1}
-                                                </Typography>
+                                    return (
+                                        <TableCell
+                                            key={i}
+                                            sx={{
+                                                position: "relative",
+                                                height: 80,
+                                                p: 1,
+                                                bgcolor: visita ? (visita.confirmado ? "#f0fdf4" : "#eff6ff") : "white",
+                                                border: "1px solid #e5e7eb",
+                                                verticalAlign: "top",
+                                                "&:hover": {
+                                                    bgcolor: visita ? undefined : "#f9fafb",
+                                                },
+                                            }}
+                                        >
+                                            {visita ? (
+                                                <Box sx={{ height: "100%", position: "relative" }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            fontWeight: 600,
+                                                            fontSize: "0.75rem",
+                                                            color: "#1f2937",
+                                                            mb: 0.5,
+                                                            lineHeight: 1.2,
+                                                        }}
+                                                    >
+                                                        {visita.nome_cliente || visita.nome_cliente_temp}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        sx={{
+                                                            fontSize: "0.7rem",
+                                                            color: "#6b7280",
+                                                            lineHeight: 1.2,
+                                                            display: "-webkit-box",
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: "vertical",
+                                                            overflow: "hidden",
+                                                        }}
+                                                    >
+                                                        {visita.observacao}
+                                                    </Typography>
+
+                                                    {visitasHorario.length > 1 && (
+                                                        <Box
+                                                            sx={{
+                                                                position: "absolute",
+                                                                top: 2,
+                                                                right: 2,
+                                                                bgcolor: "#6366f1",
+                                                                color: "white",
+                                                                borderRadius: "50%",
+                                                                width: 16,
+                                                                height: 16,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                fontSize: "0.6rem",
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            +{visitasHorario.length - 1}
+                                                        </Box>
+                                                    )}
+
+                                                    {!visita.confirmado && (
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => abrirModalConfirmar(visita)}
+                                                            sx={{
+                                                                position: "absolute",
+                                                                bottom: 2,
+                                                                right: 2,
+                                                                bgcolor: "#10b981",
+                                                                color: "white",
+                                                                width: 20,
+                                                                height: 20,
+                                                                "&:hover": {
+                                                                    bgcolor: "#059669",
+                                                                },
+                                                            }}
+                                                        >
+                                                            <Check sx={{ fontSize: 14 }} />
+                                                        </IconButton>
+                                                    )}
+                                                </Box>
+                                            ) : (
+                                                <Box
+                                                    sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        height: "100%",
+                                                        cursor: "pointer",
+                                                    }}
+                                                    onClick={() => abrirModal(data, hora)}
+                                                >
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{
+                                                            color: "#9ca3af",
+                                                            "&:hover": {
+                                                                color: "#6366f1",
+                                                                bgcolor: "#f0f9ff",
+                                                            },
+                                                        }}
+                                                    >
+                                                        <Add />
+                                                    </IconButton>
+                                                </Box>
                                             )}
-                                            {!visita.confirmado && (
-                                                <IconButton size="small" onClick={() => abrirModalConfirmar(visita)} sx={{ position: "absolute", bottom: 2, right: 2 }}>
-                                                    <Check fontSize="small" />
-                                                </IconButton>
-                                            )}
-                                        </Box>
-                                    ) : (
-                                        <IconButton size="small" onClick={() => abrirModal(data, hora)}>
-                                            <Add fontSize="small" />
-                                        </IconButton>
-                                    )}
-                                </Box>
-                            )
-                        })}
-                    </React.Fragment>
-                ))}
-            </Box>
+                                        </TableCell>
+                                    )
+                                })}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Paper>
 
+            {/* Modal Nova Visita */}
             <Modal open={modalAberto} onClose={() => setModalAberto(false)}>
-                <Box p={3} bgcolor="#fff" width={400} mx="auto" mt={10} borderRadius={2}>
-                    <Typography variant="h6" mb={2}>Nova Visita</Typography>
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 400,
+                        bgcolor: "background.paper",
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 3,
+                    }}
+                >
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                        Nova Visita
+                    </Typography>
 
                     <FormControlLabel
-                        control={<Switch checked={usarClienteTemporario} onChange={() => setUsarClienteTemporario(!usarClienteTemporario)} />}
+                        control={
+                            <Switch
+                                checked={usarClienteTemporario}
+                                onChange={() => setUsarClienteTemporario(!usarClienteTemporario)}
+                            />
+                        }
                         label="Cliente temporário"
                         sx={{ mb: 2 }}
                     />
@@ -223,11 +410,15 @@ const Agenda = () => {
                             fullWidth
                             label="Cliente"
                             value={novaVisita.id_cliente || ""}
-                            onChange={(e) => setNovaVisita({ ...novaVisita, id_cliente: e.target.value, nome_cliente_temp: "", telefone_temp: "" })}
+                            onChange={(e) =>
+                                setNovaVisita({ ...novaVisita, id_cliente: e.target.value, nome_cliente_temp: "", telefone_temp: "" })
+                            }
                             sx={{ mb: 2 }}
                         >
                             {clientes.map((c: any) => (
-                                <MenuItem key={c.id_cliente} value={c.id_cliente}>{c.nome}</MenuItem>
+                                <MenuItem key={c.id_cliente} value={c.id_cliente}>
+                                    {c.nome}
+                                </MenuItem>
                             ))}
                         </TextField>
                     ) : (
@@ -252,25 +443,59 @@ const Agenda = () => {
                     <TextField
                         fullWidth
                         label="Observação"
+                        multiline
+                        rows={3}
                         value={novaVisita.observacao || ""}
                         onChange={(e) => setNovaVisita({ ...novaVisita, observacao: e.target.value })}
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 3 }}
                     />
-                    <Button fullWidth variant="contained" onClick={salvarVisita}>Salvar</Button>
+
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                        <Button fullWidth variant="outlined" onClick={() => setModalAberto(false)}>
+                            Cancelar
+                        </Button>
+                        <Button fullWidth variant="contained" onClick={salvarVisita}>
+                            Salvar
+                        </Button>
+                    </Box>
                 </Box>
             </Modal>
 
+            {/* Modal Confirmar Visita */}
             <Modal open={Boolean(visitaParaConfirmar)} onClose={() => setVisitaParaConfirmar(null)}>
-                <Box p={3} bgcolor="#fff" width={400} mx="auto" mt={10} borderRadius={2}>
-                    <Typography variant="h6" mb={2}>Confirmar Visita</Typography>
+                <Box
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 400,
+                        bgcolor: "background.paper",
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 3,
+                    }}
+                >
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                        Confirmar Visita
+                    </Typography>
                     <TextField
                         fullWidth
                         label="Observação"
+                        multiline
+                        rows={3}
                         value={observacaoEditada}
                         onChange={(e) => setObservacaoEditada(e.target.value)}
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 3 }}
                     />
-                    <Button fullWidth variant="contained" onClick={confirmarVisita}>Confirmar</Button>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                        <Button fullWidth variant="outlined" onClick={() => setVisitaParaConfirmar(null)}>
+                            Cancelar
+                        </Button>
+                        <Button fullWidth variant="contained" onClick={confirmarVisita}>
+                            Confirmar
+                        </Button>
+                    </Box>
                 </Box>
             </Modal>
         </Box>

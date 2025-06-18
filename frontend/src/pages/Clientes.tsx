@@ -1,3 +1,7 @@
+"use client"
+
+import type React from "react"
+
 import {
     Box,
     Typography,
@@ -7,196 +11,252 @@ import {
     TableHead,
     TableRow,
     TextField,
-    LinearProgress,
     Button,
     Paper,
-    Collapse,
     IconButton,
     TablePagination,
     InputAdornment,
-} from "@mui/material";
-import {
-    KeyboardArrowDown,
-    KeyboardArrowUp,
-    ShoppingCart,
-    MonetizationOn,
-    Search,
-} from "@mui/icons-material";
-import axios from "axios";
-import { useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
-import MenuItem from "@mui/material/MenuItem";
+    Menu,
+    MenuItem,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Slider,
+    Alert,
+    Divider,
+    Chip,
+    List,
+    ListItem,
+    CircularProgress,
+} from "@mui/material"
+import { Search, MoreHoriz, Visibility, Edit, Person } from "@mui/icons-material"
+import { useState, useEffect } from "react"
+import { jwtDecode } from "jwt-decode"
+import { useClientes } from "../hooks/useClientes"
+import { formatarTelefone, formatarMoeda } from "../utils/formatters"
 
-const API = import.meta.env.VITE_API_URL;
-
-const formatarTelefone = (tel: string | null | undefined) => {
-    if (!tel) return "";
-    const numeros = tel.replace(/\D/g, "");
-    if (numeros.length === 11) {
-        return numeros.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
-    }
-    if (numeros.length === 10) {
-        return numeros.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-    }
-    return tel;
-};
-
-const formatarMoeda = (valor: number) =>
-    valor.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    });
-
-const LinearProgressWithLabel = ({ value }: { value: number }) => (
-    <Box position="relative">
-        <LinearProgress variant="determinate" value={value} />
-        <Box
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-        >
-            <Typography variant="caption" color="text.secondary">
-                {`${Math.round(value)}%`}
-            </Typography>
-        </Box>
-    </Box>
-);
-
+// Interfaces
 interface LinhaCliente {
-    id_cliente: string;
-    nome_cliente: string;
-    telefone: string | null;
-    id_grupo: string;
-    nome_grupo: string;
-    potencial_compra: number;
-    valor_comprado: number;
+    id_cliente: string
+    nome_cliente: string
+    telefone: string | null
+    id_grupo: string
+    nome_grupo: string
+    potencial_compra: number
+    valor_comprado: number
+}
+
+interface ClienteAgrupado {
+    id_cliente: string
+    nome: string
+    telefone: string | null
+    grupos: LinhaCliente[]
+    totalPotencial: number
+    totalComprado: number
+    progresso: number
+}
+
+interface GrupoEdicao {
+    id_grupo: string
+    nome_grupo: string
+    potencial_compra: number
+    valor_original: number
+}
+
+interface Usuario {
+    perfil: string
+    codusuario?: string
 }
 
 export default function Clientes() {
-    const [dados, setDados] = useState<LinhaCliente[]>([]);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(15);
-    const [busca, setBusca] = useState("");
-    const [abertos, setAbertos] = useState<Record<string, boolean>>({});
-    const [representantes, setRepresentantes] = useState<any[]>([]);
-    const [repSelecionado, setRepSelecionado] = useState("");
-    const [perfil, setPerfil] = useState("");
-    const token = localStorage.getItem("token");
+    const [page, setPage] = useState(0)
+    const [rowsPerPage, setRowsPerPage] = useState(15)
+    const [busca, setBusca] = useState("")
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+    const [clienteSelecionado, setClienteSelecionado] = useState<ClienteAgrupado | null>(null)
+    const [modalAberto, setModalAberto] = useState(false)
+    const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false)
+    const [gruposEdicao, setGruposEdicao] = useState<GrupoEdicao[]>([])
+    const [novoGrupo, setNovoGrupo] = useState("")
+    const [usuario, setUsuario] = useState<Usuario | null>(null)
+    const [salvando, setSalvando] = useState(false)
 
-    const carregar = async () => {
-        const params: any = {};
-        if (repSelecionado) params.codusuario = repSelecionado;
-        const res = await axios.get(`${API}/clientes`, {
-            params,
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        const convertidos = res.data.map((linha: any) => ({
-            ...linha,
-            potencial_compra: Number(linha.potencial_compra),
-            valor_comprado: Number(linha.valor_comprado),
-        }));
-        setDados(convertidos);
-    };
+    const { dados, representantes, repSelecionado, setRepSelecionado, loading, error, salvarPotencial, recarregar } =
+        useClientes()
 
-    const carregarRepresentantes = async () => {
-        const res = await axios.get(
-            `${API}/usuarios/representantes`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setRepresentantes(res.data);
-    };
-
+    // Decodificar token para obter perfil do usuário
     useEffect(() => {
+        const token = localStorage.getItem("token")
         if (token) {
-            const data: any = jwtDecode(token);
-            setPerfil(data.perfil);
-            if (data.perfil === "coordenador" || data.perfil === "diretor") {
-                carregarRepresentantes();
+            try {
+                const decoded = jwtDecode<any>(token)
+                setUsuario({
+                    perfil: decoded.perfil,
+                    codusuario: decoded.codusuario,
+                })
+            } catch (error) {
+                console.error("Erro ao decodificar token:", error)
             }
         }
-    }, [token]);
+    }, [])
 
-    useEffect(() => {
-        if (token) {
-            carregar();
-        }
-    }, [token, repSelecionado]);
-
-    const clientes = Object.values(
-        dados.reduce((acc: any, linha, index) => {
-            if (!acc[linha.id_cliente]) {
-                acc[linha.id_cliente] = {
-                    id_cliente: linha.id_cliente,
-                    nome: linha.nome_cliente,
-                    telefone: linha.telefone,
-                    grupos: [],
-                    totalPotencial: 0,
-                    totalComprado: 0,
-                };
+    // Agrupar clientes
+    const clientes = dados.reduce((acc: any, linha) => {
+        if (!acc[linha.id_cliente]) {
+            acc[linha.id_cliente] = {
+                id_cliente: linha.id_cliente,
+                nome: linha.nome_cliente,
+                telefone: linha.telefone,
+                grupos: [],
+                totalPotencial: 0,
+                totalComprado: 0,
+                progresso: 0,
             }
-            acc[linha.id_cliente].grupos.push({ ...linha, index });
-            acc[linha.id_cliente].totalPotencial += linha.potencial_compra;
-            acc[linha.id_cliente].totalComprado += linha.valor_comprado;
-            return acc;
-        }, {})
-    ) as any[];
+        }
+        acc[linha.id_cliente].grupos.push(linha)
+        acc[linha.id_cliente].totalPotencial += linha.potencial_compra
+        acc[linha.id_cliente].totalComprado += linha.valor_comprado
+        return acc
+    }, {})
 
-    const clientesFiltrados = clientes.filter((c: any) =>
-        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        formatarTelefone(c.telefone).includes(busca)
-    );
+    const clientesArray = Object.values(clientes).map((cliente: any) => ({
+        ...cliente,
+        progresso: cliente.totalPotencial > 0 ? Math.round((cliente.totalComprado / cliente.totalPotencial) * 100) : 0,
+    })) as ClienteAgrupado[]
 
-    const handleChange = (index: number, valor: string) => {
-        const novo = [...dados];
-        novo[index].potencial_compra = Number(valor);
-        setDados(novo);
-    };
+    // Filtrar clientes
+    const clientesFiltrados = clientesArray.filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
 
-    const salvar = async (linha: LinhaCliente) => {
-        await axios.put(
-            `${API}/clientes/${linha.id_cliente}/grupos/${linha.id_grupo}`,
-            { potencial_compra: linha.potencial_compra },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-        carregar();
-    };
+    // Handlers do menu
+    const handleMenuClick = (event: React.MouseEvent<HTMLElement>, cliente: ClienteAgrupado) => {
+        event.stopPropagation()
+        setAnchorEl(event.currentTarget)
+        setClienteSelecionado(cliente)
+    }
 
-    const handleChangePage = (_: unknown, newPage: number) => {
-        setPage(newPage);
-    };
+    const handleMenuClose = () => {
+        setAnchorEl(null)
+        setClienteSelecionado(null)
+    }
 
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
+    const handleVerDetalhes = () => {
+        setModalDetalhesAberto(true)
+        handleMenuClose()
+    }
+
+    const handleEditarPotencial = () => {
+        if (clienteSelecionado) {
+            setGruposEdicao(
+                clienteSelecionado.grupos.map((grupo) => ({
+                    id_grupo: grupo.id_grupo,
+                    nome_grupo: grupo.nome_grupo,
+                    potencial_compra: grupo.potencial_compra,
+                    valor_original: grupo.potencial_compra,
+                })),
+            )
+            setModalAberto(true)
+        }
+        handleMenuClose()
+    }
+
+    const handleFecharModal = () => {
+        setModalAberto(false)
+        setClienteSelecionado(null)
+        setGruposEdicao([])
+        setNovoGrupo("")
+        setSalvando(false)
+    }
+
+    const handleFecharModalDetalhes = () => {
+        setModalDetalhesAberto(false)
+        setClienteSelecionado(null)
+    }
+
+    const handleSliderChange = (index: number, valor: number) => {
+        const novosGrupos = [...gruposEdicao]
+        novosGrupos[index].potencial_compra = valor
+        setGruposEdicao(novosGrupos)
+    }
+
+    const handleSalvarPotencial = async () => {
+        if (!clienteSelecionado) return
+
+        try {
+            setSalvando(true)
+
+            // Salvar cada grupo modificado
+            for (const grupo of gruposEdicao) {
+                if (grupo.potencial_compra !== grupo.valor_original) {
+                    console.log("Salvando grupo:", {
+                        clienteId: clienteSelecionado.id_cliente,
+                        grupoId: grupo.id_grupo,
+                        potencial: grupo.potencial_compra,
+                    })
+
+                    await salvarPotencial(clienteSelecionado.id_cliente, grupo.id_grupo, grupo.potencial_compra)
+                }
+            }
+
+            // Recarregar dados
+            await recarregar()
+
+            // Fechar modal
+            handleFecharModal()
+
+            console.log("Potencial salvo com sucesso!")
+        } catch (error) {
+            console.error("Erro ao salvar potencial:", error)
+            alert("Erro ao salvar potencial. Tente novamente.")
+        } finally {
+            setSalvando(false)
+        }
+    }
+
+    const totalPotencialCalculado = gruposEdicao.reduce((acc, grupo) => acc + grupo.potencial_compra, 0)
 
     return (
-        <Box>
-            <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                flexWrap="wrap"
-                mb={2}
-            >
-                <Typography variant="h5" gutterBottom sx={{ mr: 2 }}>
-                    Clientes
+        <Box sx={{ p: 3 }}>
+            {/* Header */}
+            <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                    <Person sx={{ color: "#6366f1", mr: 1, fontSize: 28 }} />
+                    <Typography variant="h4" sx={{ fontWeight: 600, color: "#1f2937" }}>
+                        Gestão de Clientes
+                    </Typography>
+                </Box>
+                <Typography variant="body1" color="text.secondary">
+                    Visualize, edite e gerencie as informações e o potencial de vendas de seus clientes.
                 </Typography>
-                {(perfil === "coordenador" || perfil === "diretor") && (
+            </Box>
+
+            {/* Controles */}
+            <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+                {/* Campo de busca */}
+                <TextField
+                    placeholder="Buscar nome do cliente..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    sx={{ flex: 1, minWidth: 300 }}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <Search sx={{ color: "text.secondary" }} />
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+
+                {/* Filtro de representantes */}
+                {(usuario?.perfil === "coordenador" || usuario?.perfil === "diretor") && (
                     <TextField
                         select
                         label="Representante"
                         value={repSelecionado}
                         onChange={(e) => setRepSelecionado(e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 200, mt: { xs: 1, sm: 0 } }}
+                        sx={{ minWidth: 200 }}
                     >
-                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="">Todos os Representantes</MenuItem>
                         {representantes.map((r: any) => (
                             <MenuItem key={r.codusuario} value={r.codusuario}>
                                 {r.nome}
@@ -205,126 +265,344 @@ export default function Clientes() {
                     </TextField>
                 )}
             </Box>
-            <TextField
-                size="small"
-                placeholder="Buscar por nome ou telefone"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                sx={{ mb: 1 }}
-                InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                            <Search fontSize="small" />
-                        </InputAdornment>
-                    ),
-                }}
-            />
-            <Paper>
-                <Table size="small">
+
+            {/* Tabela */}
+            <Paper elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
+                <Table>
                     <TableHead>
-                        <TableRow>
-                            <TableCell width="50"></TableCell>
-                            <TableCell>Cliente</TableCell>
-                            <TableCell>Telefone</TableCell>
-                            <TableCell align="right">
-                                <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
-                                Comprado
+                        <TableRow sx={{ bgcolor: "#f9fafb" }}>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Nome</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }}>Telefone</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }} align="right">
+                                Potencial Mensal
                             </TableCell>
-                            <TableCell align="right">
-                                <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
-                                Potencial
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }} align="right">
+                                Comprado no Mês
                             </TableCell>
-                            <TableCell width="150">Progresso</TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }} align="center">
+                                Progresso
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, color: "#374151" }} align="center">
+                                Ações
+                            </TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {clientesFiltrados.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((c: any) => (
-                            <>
-                                <TableRow hover key={c.id_cliente} onClick={() => setAbertos({ ...abertos, [c.id_cliente]: !abertos[c.id_cliente] })}>
-                                    <TableCell>
-                                        <IconButton size="small">
-                                            {abertos[c.id_cliente] ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                                        </IconButton>
-                                    </TableCell>
-                                    <TableCell>{c.nome}</TableCell>
-                                    <TableCell>{c.telefone}</TableCell>
-                                    <TableCell align="right">{formatarMoeda(c.totalComprado)}</TableCell>
-                                    <TableCell align="right">{formatarMoeda(c.totalPotencial)}</TableCell>
-                                    <TableCell>
-                                        <LinearProgressWithLabel
-                                            value={
-                                                c.totalPotencial
-                                                    ? (c.totalComprado / c.totalPotencial) * 100
-                                                    : 0
-                                            }
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                                        <Collapse in={abertos[c.id_cliente]} timeout="auto" unmountOnExit>
-                                            <Table size="small" sx={{ mt: 1, bgcolor: "#fafafa", p: 1 }}>
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Grupo</TableCell>
-                                                        <TableCell align="right">
-                                                            <ShoppingCart fontSize="small" sx={{ mr: 0.5 }} />
-                                                            Comprado
-                                                        </TableCell>
-                                                        <TableCell align="right">
-                                                            <MonetizationOn fontSize="small" sx={{ mr: 0.5 }} />
-                                                            Potencial
-                                                        </TableCell>
-                                                        <TableCell width="150">Progresso</TableCell>
-                                                        <TableCell></TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {c.grupos.map((linha: any) => (
-                                                        <TableRow key={`${linha.id_cliente}-${linha.id_grupo}`}>
-                                                            <TableCell>{linha.nome_grupo}</TableCell>
-                                                            <TableCell align="right">{formatarMoeda(linha.valor_comprado)}</TableCell>
-                                                            <TableCell align="right">
-                                                                <TextField
-                                                                    size="small"
-                                                                    type="number"
-                                                                    value={linha.potencial_compra}
-                                                                    onChange={(e) => handleChange(linha.index, e.target.value)}
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <LinearProgressWithLabel
-                                                                    value={
-                                                                        linha.potencial_compra
-                                                                            ? (linha.valor_comprado / linha.potencial_compra) * 100
-                                                                            : 0
-                                                                    }
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Button size="small" variant="contained" onClick={() => salvar(linha)}>Salvar</Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </Collapse>
-                                    </TableCell>
-                                </TableRow>
-                            </>
+                        {clientesFiltrados.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((cliente) => (
+                            <TableRow key={cliente.id_cliente} hover>
+                                <TableCell>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        {cliente.nome}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {formatarTelefone(cliente.telefone)}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        {formatarMoeda(cliente.totalPotencial)}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography variant="body2" color="text.secondary">
+                                        {formatarMoeda(cliente.totalComprado)}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Chip
+                                        label={`${cliente.progresso}%`}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: cliente.progresso === 0 ? "#fef2f2" : "#dcfce7",
+                                            color: cliente.progresso === 0 ? "#dc2626" : "#16a34a",
+                                            fontWeight: 500,
+                                        }}
+                                    />
+                                </TableCell>
+                                <TableCell align="center">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => handleMenuClick(e, cliente)}
+                                        sx={{ color: "text.secondary" }}
+                                    >
+                                        <MoreHoriz />
+                                    </IconButton>
+                                </TableCell>
+                            </TableRow>
                         ))}
                     </TableBody>
                 </Table>
+
                 <TablePagination
                     component="div"
                     count={clientesFiltrados.length}
                     page={page}
-                    onPageChange={handleChangePage}
+                    onPageChange={(_, newPage) => setPage(newPage)}
                     rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    onRowsPerPageChange={(e) => {
+                        setRowsPerPage(Number.parseInt(e.target.value, 10))
+                        setPage(0)
+                    }}
                     rowsPerPageOptions={[15, 30, 50]}
+                    labelRowsPerPage="Linhas por página:"
                 />
             </Paper>
+
+            {/* Menu de ações */}
+            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+                <MenuItem onClick={handleVerDetalhes}>
+                    <Visibility sx={{ mr: 1, fontSize: 20 }} />
+                    Ver Detalhes
+                </MenuItem>
+                <MenuItem onClick={handleEditarPotencial}>
+                    <Edit sx={{ mr: 1, fontSize: 20 }} />
+                    Editar Potencial
+                </MenuItem>
+            </Menu>
+
+            {/* Modal Ver Detalhes */}
+            <Dialog
+                open={modalDetalhesAberto}
+                onClose={handleFecharModalDetalhes}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 },
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Detalhes do Cliente: {clienteSelecionado?.nome}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Visualize o potencial e compras por grupo de produtos
+                    </Typography>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: 2 }}>
+                    {/* Resumo geral */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: "#f8fafc", borderRadius: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Resumo Geral
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    Potencial Total
+                                </Typography>
+                                <Typography variant="h6" sx={{ color: "#3b82f6", fontWeight: 600 }}>
+                                    {formatarMoeda(clienteSelecionado?.totalPotencial || 0)}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    Comprado Total
+                                </Typography>
+                                <Typography variant="h6" sx={{ color: "#10b981", fontWeight: 600 }}>
+                                    {formatarMoeda(clienteSelecionado?.totalComprado || 0)}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    Progresso
+                                </Typography>
+                                <Typography variant="h6" sx={{ color: "#f59e0b", fontWeight: 600 }}>
+                                    {clienteSelecionado?.progresso || 0}%
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    <Divider sx={{ mb: 3 }} />
+
+                    {/* Detalhes por grupo */}
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                        Detalhes por Grupo de Produtos
+                    </Typography>
+
+                    <List sx={{ p: 0 }}>
+                        {clienteSelecionado?.grupos.map((grupo, index) => (
+                            <ListItem
+                                key={grupo.id_grupo}
+                                sx={{
+                                    mb: 2,
+                                    p: 2,
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: 1,
+                                    flexDirection: "column",
+                                    alignItems: "stretch",
+                                }}
+                            >
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                        {grupo.nome_grupo}
+                                    </Typography>
+                                    <Chip
+                                        label={`${grupo.potencial_compra > 0 ? Math.round((grupo.valor_comprado / grupo.potencial_compra) * 100) : 0}%`}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: grupo.valor_comprado === 0 ? "#fef2f2" : "#dcfce7",
+                                            color: grupo.valor_comprado === 0 ? "#dc2626" : "#16a34a",
+                                            fontWeight: 500,
+                                        }}
+                                    />
+                                </Box>
+
+                                <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                    <Box sx={{ flex: 1, minWidth: 150 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Potencial Mensal
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontWeight: 600, color: "#3b82f6" }}>
+                                            {formatarMoeda(grupo.potencial_compra)}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 150 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Comprado no Mês
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontWeight: 600, color: "#10b981" }}>
+                                            {formatarMoeda(grupo.valor_comprado)}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ flex: 1, minWidth: 150 }}>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Diferença
+                                        </Typography>
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
+                                                fontWeight: 600,
+                                                color: grupo.potencial_compra - grupo.valor_comprado >= 0 ? "#f59e0b" : "#ef4444",
+                                            }}
+                                        >
+                                            {formatarMoeda(grupo.potencial_compra - grupo.valor_comprado)}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </ListItem>
+                        ))}
+                    </List>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button onClick={handleFecharModalDetalhes} variant="contained">
+                        Fechar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Modal de edição */}
+            <Dialog
+                open={modalAberto}
+                onClose={handleFecharModal}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: 2 },
+                }}
+            >
+                <DialogTitle sx={{ pb: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Editar Potencial de Compra para {clienteSelecionado?.nome}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Ajuste o potencial de compra mensal por grupo de produtos. O potencial geral é a soma dos grupos.
+                    </Typography>
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: 2 }}>
+                    {/* Informação sobre compras */}
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                        Total comprado por {clienteSelecionado?.nome} este mês:{" "}
+                        {formatarMoeda(clienteSelecionado?.totalComprado || 0)}
+                    </Alert>
+
+                    {/* Potencial geral calculado */}
+                    <Box sx={{ mb: 3, p: 2, bgcolor: "#f8fafc", borderRadius: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Potencial Geral Mensal (Calculado)
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: "#3b82f6", fontWeight: 600 }}>
+                            {formatarMoeda(totalPotencialCalculado)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            Este valor é a soma dos potenciais de cada grupo de produtos.
+                        </Typography>
+                    </Box>
+
+                    <Divider sx={{ mb: 3 }} />
+
+                    {/* Grupos de produtos */}
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                        Potencial Mensal por Grupo de Produtos
+                    </Typography>
+
+                    {gruposEdicao.map((grupo, index) => (
+                        <Box key={grupo.id_grupo} sx={{ mb: 3, p: 2, border: "1px solid #e5e7eb", borderRadius: 1 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {grupo.nome_grupo}
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ px: 1 }}>
+                                <Slider
+                                    value={grupo.potencial_compra}
+                                    onChange={(_, value) => handleSliderChange(index, value as number)}
+                                    min={0}
+                                    max={500000}
+                                    step={1000}
+                                    sx={{ mb: 1 }}
+                                />
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        R$ {grupo.potencial_compra.toLocaleString("pt-BR")}
+                                    </Typography>
+                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                        {formatarMoeda(grupo.potencial_compra)}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
+                    ))}
+
+                    {/* Campo para novo grupo */}
+                    <TextField
+                        fullWidth
+                        placeholder="Nome do novo grupo"
+                        value={novoGrupo}
+                        onChange={(e) => setNovoGrupo(e.target.value)}
+                        sx={{ mt: 2 }}
+                    />
+                </DialogContent>
+
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button onClick={handleFecharModal} color="inherit" disabled={salvando}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleSalvarPotencial}
+                        variant="contained"
+                        disabled={salvando}
+                        sx={{
+                            bgcolor: "#f97316",
+                            "&:hover": { bgcolor: "#ea580c" },
+                        }}
+                    >
+                        {salvando ? (
+                            <>
+                                <CircularProgress size={16} sx={{ mr: 1, color: "white" }} />
+                                Salvando...
+                            </>
+                        ) : (
+                            "Salvar Potencial"
+                        )}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
-    );
+    )
 }
