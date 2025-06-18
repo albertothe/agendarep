@@ -1,0 +1,24 @@
+name: agendarep_app
+description: Aplicativo móvel para AgendaRep
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.14.0
+  flutter_secure_storage: ^9.0.0
+  provider: ^6.0.5
+  intl: ^0.19.0
+  jwt_decode: ^0.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
