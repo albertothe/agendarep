@@ -140,9 +140,13 @@ export default function Clientes() {
         setClienteSelecionado(null)
     }
 
+    const fecharMenu = () => {
+        setAnchorEl(null)
+    }
+
     const handleVerDetalhes = () => {
         setModalDetalhesAberto(true)
-        handleMenuClose()
+        fecharMenu()
     }
 
     const handleEditarPotencial = () => {
@@ -157,7 +161,7 @@ export default function Clientes() {
             )
             setModalAberto(true)
         }
-        handleMenuClose()
+        fecharMenu()
     }
 
     const handleFecharModal = () => {
