@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import 'agenda_page.dart';
+import 'settings_page.dart';
 
 void main() {
   runApp(const AgendaRepApp());
@@ -17,6 +18,7 @@ class AgendaRepApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginPage(),
         '/agenda': (context) => const AgendaPage(),
+        '/settings': (context) => const SettingsPage(),
       },
     );
   }
