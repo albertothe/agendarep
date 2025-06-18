@@ -147,17 +147,15 @@ const Agenda = () => {
     }
 
     const formatarDiaSemana = (dia: dayjs.Dayjs) => {
-        const nomesDias = {
-            sunday: "Domingo",
-            monday: "Segunda",
-            tuesday: "Terça",
-            wednesday: "Quarta",
-            thursday: "Quinta",
-            friday: "Sexta",
-            saturday: "Sábado",
+        // dayjs retorna os nomes dos dias em português quando a localidade
+        // "pt-br" está ativa. Porém, alguns dias incluem o sufixo "-feira",
+        // que não desejamos exibir.
+        let nome = dia.format("dddd")
+        nome = nome.charAt(0).toUpperCase() + nome.slice(1)
+        if (nome.endsWith("-feira")) {
+            nome = nome.replace("-feira", "")
         }
-        const diaSemana = nomesDias[dia.format("dddd") as keyof typeof nomesDias]
-        return `${diaSemana}, ${dia.format("MMM DD")}`
+        return `${nome}, ${dia.format("MMM DD")}`
     }
 
     return (
