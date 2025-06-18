@@ -26,8 +26,7 @@ import axios from "axios"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 import { jwtDecode } from "jwt-decode"
-
-const API = import.meta.env.VITE_API_URL
+import { API_URL } from "../services/api"
 
 export default function Dashboard() {
     const [clientes, setClientes] = useState<any[]>([])
@@ -46,7 +45,7 @@ export default function Dashboard() {
             if (repSelecionado) params.codusuario = repSelecionado
 
             // Carregar clientes
-            const resClientes = await axios.get(`${API}/clientes`, {
+            const resClientes = await axios.get(`${API_URL}/clientes`, {
                 params,
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -62,7 +61,7 @@ export default function Dashboard() {
             const fim = dayjs().endOf("week").format("YYYY-MM-DD")
             const paramsVisitas: any = { inicio, fim }
             if (repSelecionado) paramsVisitas.codusuario = repSelecionado
-            const resVisitas = await axios.get(`${API}/visitas`, {
+            const resVisitas = await axios.get(`${API_URL}/visitas`, {
                 params: paramsVisitas,
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -75,7 +74,7 @@ export default function Dashboard() {
     }
 
     const carregarRepresentantes = async () => {
-        const res = await axios.get(`${API}/usuarios/representantes`, {
+        const res = await axios.get(`${API_URL}/usuarios/representantes`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
