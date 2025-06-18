@@ -1,13 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
 import Agenda from "./pages/Agenda";
 import Clientes from "./pages/Clientes";
 import Sugestoes from "./pages/Sugestoes";
+import { AuthContext } from "./context/AuthContext";
 
 function App() {
-  const token = localStorage.getItem("token");
+  const { token } = useContext(AuthContext);
 
   return (
     <BrowserRouter>
