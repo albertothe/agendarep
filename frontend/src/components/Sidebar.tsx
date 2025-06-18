@@ -26,8 +26,9 @@ import {
     Link as LinkIcon,
 } from "@mui/icons-material"
 import { useNavigate, useLocation } from "react-router-dom"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useContext } from "react"
 import { jwtDecode } from "jwt-decode"
+import { AuthContext } from "../context/AuthContext"
 
 // Interfaces
 interface Usuario {
@@ -107,12 +108,14 @@ const Sidebar = ({ onClose }: SidebarProps) => {
         }
     }, [isTokenValid])
 
+    const { setToken } = useContext(AuthContext)
+
     const handleLogout = useCallback(() => {
-        localStorage.removeItem("token")
+        setToken(null)
         localStorage.removeItem("usuario")
         setUsuario(null)
         navigate("/login", { replace: true })
-    }, [navigate])
+    }, [navigate, setToken])
 
     const handleNavigation = (rota: string) => {
         navigate(rota)

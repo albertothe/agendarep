@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, TextField, Button, Typography, Paper, Box } from "@mui/material";
 import { api } from "../services/api";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
     const [login, setLogin] = useState("");
     const [senha, setSenha] = useState("");
     const [erro, setErro] = useState("");
     const navigate = useNavigate();
+    const { setToken } = useContext(AuthContext);
 
     const handleLogin = async () => {
         console.log("Tentando login com:", login, senha); // <- debug
         try {
             const response = await api.post("/auth/login", { login, senha });
-            localStorage.setItem("token", response.data.token);
+            setToken(response.data.token);
             navigate("/dashboard");
         } catch (err) {
             setErro("Usuário ou senha inválidos.");
