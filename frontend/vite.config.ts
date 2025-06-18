@@ -5,5 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 8500,
+    host: true // <- permite acesso externo via IP
   },
 });
