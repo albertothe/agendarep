@@ -13,8 +13,25 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _loginController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  bool _lembrarUsuario = false;
   String? erro;
   final ApiService api = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarUsuarioSalvo();
+  }
+
+  Future<void> _carregarUsuarioSalvo() async {
+    final salvo = await api.getSavedUser();
+    if (salvo != null) {
+      setState(() {
+        _loginController.text = salvo;
+        _lembrarUsuario = true;
+      });
+    }
+  }
 
   Future<void> _fazerLogin() async {
     final res = await api.post('/auth/login', {
@@ -24,6 +41,11 @@ class _LoginPageState extends State<LoginPage> {
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       await api.setToken(data['token']);
+      if (_lembrarUsuario) {
+        await api.setSavedUser(_loginController.text);
+      } else {
+        await api.removeSavedUser();
+      }
       if (context.mounted) {
         Navigator.of(context).pushReplacementNamed('/agenda');
       }
@@ -38,7 +60,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AgendaRep - Login'),
+        title: const Text('AgendaRep'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -70,6 +92,17 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _senhaController,
                     obscureText: true,
                     decoration: const InputDecoration(labelText: 'Senha'),
+                  ),
+                  CheckboxListTile(
+                    title: const Text('Lembrar usuário'),
+                    value: _lembrarUsuario,
+                    onChanged: (v) {
+                      setState(() {
+                        _lembrarUsuario = v ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
                   ),
                   if (erro != null) ...[
                     const SizedBox(height: 12),
