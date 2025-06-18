@@ -1,6 +1,8 @@
 import { Box, Paper, Typography, TextField, MenuItem } from "@mui/material";
 import { People, CalendarMonth, MonetizationOn } from "@mui/icons-material";
 import axios from "axios";
+
+const API = import.meta.env.VITE_API_URL;
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
@@ -17,7 +19,7 @@ export default function Dashboard() {
     const carregar = async () => {
         const params: any = {};
         if (repSelecionado) params.codusuario = repSelecionado;
-        const resClientes = await axios.get("http://localhost:8501/clientes", {
+        const resClientes = await axios.get(`${API}/clientes`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -34,7 +36,7 @@ export default function Dashboard() {
         const fim = dayjs().endOf("week").format("YYYY-MM-DD");
         const paramsVisitas: any = { inicio, fim };
         if (repSelecionado) paramsVisitas.codusuario = repSelecionado;
-        const resVisitas = await axios.get("http://localhost:8501/visitas", {
+        const resVisitas = await axios.get(`${API}/visitas`, {
             params: paramsVisitas,
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -43,7 +45,7 @@ export default function Dashboard() {
 
     const carregarRepresentantes = async () => {
         const res = await axios.get(
-            "http://localhost:8501/usuarios/representantes",
+            `${API}/usuarios/representantes`,
             { headers: { Authorization: `Bearer ${token}` } }
         );
         setRepresentantes(res.data);

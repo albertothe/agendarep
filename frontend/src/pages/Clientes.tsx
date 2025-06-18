@@ -27,6 +27,8 @@ import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import MenuItem from "@mui/material/MenuItem";
 
+const API = import.meta.env.VITE_API_URL;
+
 const formatarTelefone = (tel: string | null | undefined) => {
     if (!tel) return "";
     const numeros = tel.replace(/\D/g, "");
@@ -89,7 +91,7 @@ export default function Clientes() {
     const carregar = async () => {
         const params: any = {};
         if (repSelecionado) params.codusuario = repSelecionado;
-        const res = await axios.get("http://localhost:8501/clientes", {
+        const res = await axios.get(`${API}/clientes`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         });
@@ -103,7 +105,7 @@ export default function Clientes() {
 
     const carregarRepresentantes = async () => {
         const res = await axios.get(
-            "http://localhost:8501/usuarios/representantes",
+            `${API}/usuarios/representantes`,
             { headers: { Authorization: `Bearer ${token}` } }
         );
         setRepresentantes(res.data);
@@ -157,7 +159,7 @@ export default function Clientes() {
 
     const salvar = async (linha: LinhaCliente) => {
         await axios.put(
-            `http://localhost:8501/clientes/${linha.id_cliente}/grupos/${linha.id_grupo}`,
+            `${API}/clientes/${linha.id_cliente}/grupos/${linha.id_grupo}`,
             { potencial_compra: linha.potencial_compra },
             { headers: { Authorization: `Bearer ${token}` } }
         );
