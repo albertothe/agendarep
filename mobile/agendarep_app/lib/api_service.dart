@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const String _defaultBaseUrl = 'http://10.0.2.2:8501';
+  static const String _defaultBaseUrl = 'http://10.5.59.85:8501';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<String> getBaseUrl() async {
@@ -20,6 +20,18 @@ class ApiService {
 
   Future<void> setToken(String token) async {
     await _storage.write(key: 'token', value: token);
+  }
+
+  Future<String?> getSavedUser() async {
+    return await _storage.read(key: 'saved_user');
+  }
+
+  Future<void> setSavedUser(String user) async {
+    await _storage.write(key: 'saved_user', value: user);
+  }
+
+  Future<void> removeSavedUser() async {
+    await _storage.delete(key: 'saved_user');
   }
 
   Future<http.Response> post(String path, Map<String, dynamic> data) async {
