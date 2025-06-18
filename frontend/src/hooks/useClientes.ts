@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { jwtDecode } from "jwt-decode"
-
-const API = import.meta.env.VITE_API_URL
+import { API_URL } from "../services/api"
 
 interface LinhaCliente {
     id_cliente: string
@@ -35,7 +34,7 @@ export const useClientes = () => {
             const params: any = {}
             if (repSelecionado) params.codusuario = repSelecionado
 
-            const res = await axios.get(`${API}/clientes`, {
+            const res = await axios.get(`${API_URL}/clientes`, {
                 params,
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -59,7 +58,7 @@ export const useClientes = () => {
         if (!token) return
 
         try {
-            const res = await axios.get(`${API}/usuarios/representantes`, {
+            const res = await axios.get(`${API_URL}/usuarios/representantes`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             setRepresentantes(res.data)
@@ -76,7 +75,7 @@ export const useClientes = () => {
 
             try {
                 const response = await axios.put(
-                    `${API}/clientes/${idCliente}/grupos/${idGrupo}`,
+                    `${API_URL}/clientes/${idCliente}/grupos/${idGrupo}`,
                     { potencial_compra: potencial },
                     {
                         headers: {

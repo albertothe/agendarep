@@ -23,8 +23,7 @@ import {
     TableRow,
 } from "@mui/material"
 import { Add, Check, CalendarMonth } from "@mui/icons-material"
-
-const API = import.meta.env.VITE_API_URL
+import { API_URL } from "../services/api"
 
 const horas = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
 
@@ -69,7 +68,7 @@ const Agenda = () => {
         const fim = diasSemana[6].format("YYYY-MM-DD")
         const params: any = { inicio, fim }
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API}/visitas`, {
+        const res = await axios.get(`${API_URL}/visitas`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -79,7 +78,7 @@ const Agenda = () => {
     const buscarClientes = async () => {
         const params: any = {}
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API}/visitas/clientes/representante`, {
+        const res = await axios.get(`${API_URL}/visitas/clientes/representante`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -87,7 +86,7 @@ const Agenda = () => {
     }
 
     const carregarRepresentantes = async () => {
-        const res = await axios.get(`${API}/usuarios/representantes`, {
+        const res = await axios.get(`${API_URL}/usuarios/representantes`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
@@ -100,7 +99,7 @@ const Agenda = () => {
     }
 
     const salvarVisita = async () => {
-        await axios.post(`${API}/visitas`, novaVisita, {
+        await axios.post(`${API_URL}/visitas`, novaVisita, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setModalAberto(false)
@@ -115,14 +114,14 @@ const Agenda = () => {
     const confirmarVisita = async () => {
         if (!visitaParaConfirmar) return
         await axios.put(
-            `${API}/visitas/${visitaParaConfirmar.id}/observacao`,
+            `${API_URL}/visitas/${visitaParaConfirmar.id}/observacao`,
             { observacao: observacaoEditada },
             {
                 headers: { Authorization: `Bearer ${token}` },
             },
         )
         await axios.put(
-            `${API}/visitas/${visitaParaConfirmar.id}/confirmar`,
+            `${API_URL}/visitas/${visitaParaConfirmar.id}/confirmar`,
             {},
             {
                 headers: { Authorization: `Bearer ${token}` },
