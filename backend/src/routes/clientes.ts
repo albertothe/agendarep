@@ -6,42 +6,53 @@ const router = Router();
 
 // Lista clientes respeitando o perfil do usuário
 router.get("/", autenticar, async (req: Request, res: Response) => {
-    const { codusuario: codParam } = req.query as any;
+    const { codusuario: codParam, pagina, limite } = req.query as any;
     const { codusuario, perfil } = (req as any).user || {};
 
     try {
-        let query = `SELECT c.id_cliente, c.nome AS nome_cliente, c.telefone,
-                            g.id_grupo, g.nome AS nome_grupo,
-                            cg.potencial_compra, cg.valor_comprado
-                     FROM agr_clientes c
-                     LEFT JOIN agr_cliente_grupo cg ON c.id_cliente = cg.id_cliente
-                     LEFT JOIN agr_grupos g ON cg.id_grupo = g.id_grupo`;
+        const page = parseInt(pagina) > 0 ? parseInt(pagina) : 1;
+        const limit = parseInt(limite) > 0 ? parseInt(limite) : 50;
+        const offset = (page - 1) * limit;
+
+        let baseQuery = `FROM agr_clientes c
+                         LEFT JOIN agr_cliente_grupo cg ON c.id_cliente = cg.id_cliente
+                         LEFT JOIN agr_grupos g ON cg.id_grupo = g.id_grupo`;
         const params: any[] = [];
+        let where = "";
 
         if (perfil === "representante") {
-            query += " WHERE c.cod_representante = $1";
+            where = " WHERE c.cod_representante = $1";
             params.push(codusuario);
         } else if (perfil === "coordenador") {
             if (codParam) {
-                query += " WHERE c.cod_representante = $1";
+                where = " WHERE c.cod_representante = $1";
                 params.push(codParam);
             } else {
-                query +=
+                where =
                     " WHERE c.cod_representante IN (SELECT codusuario FROM agr_usuarios WHERE coordenador_id = $1)";
                 params.push(codusuario);
             }
         } else if (perfil === "diretor") {
             if (codParam) {
-                query += " WHERE c.cod_representante = $1";
+                where = " WHERE c.cod_representante = $1";
                 params.push(codParam);
             }
             // Sem parâmetro: diretor visualiza todos os clientes
         }
 
-        query += " ORDER BY c.nome, g.id_grupo";
+        const query = `SELECT c.id_cliente, c.nome AS nome_cliente, c.telefone,
+                               g.id_grupo, g.nome AS nome_grupo,
+                               cg.potencial_compra, cg.valor_comprado
+                        ${baseQuery}${where}
+                        ORDER BY c.nome, g.id_grupo
+                        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
 
-        const { rows } = await pool.query(query, params);
-        res.json(rows);
+        const countQuery = `SELECT COUNT(DISTINCT c.id_cliente) AS total ${baseQuery}${where}`;
+
+        const { rows } = await pool.query(query, [...params, limit, offset]);
+        const countResult = await pool.query(countQuery, params);
+
+        res.json({ dados: rows, total: Number(countResult.rows[0].total) });
     } catch (err) {
         console.error("Erro ao listar clientes:", err);
         res.status(500).json({ erro: "Erro ao listar clientes" });
