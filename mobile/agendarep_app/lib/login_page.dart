@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
         await api.removeSavedUser();
       }
       if (context.mounted) {
-        Navigator.of(context).pushReplacementNamed('/agenda');
+        Navigator.of(context).pushReplacementNamed('/home');
       }
     } else {
       setState(() {
