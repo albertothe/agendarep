@@ -15,26 +15,55 @@ class ClientesPage extends StatefulWidget {
 class _ClientesPageState extends State<ClientesPage> {
   final ApiService api = ApiService();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
+  Map<String, Map<String, dynamic>> clientesMap = {};
   List<Map<String, dynamic>> clientes = [];
   bool loading = true;
+  bool loadingMore = false;
+  bool hasMore = true;
+  int page = 1;
+  final int limit = 50;
 
   @override
   void initState() {
     super.initState();
-    _loadClientes();
+    _scrollController.addListener(_onScroll);
+    _loadClientes(reset: true);
   }
 
-  Future<void> _loadClientes() async {
-    setState(() => loading = true);
-    final res = await api.get('/clientes');
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadClientes({bool reset = false}) async {
+    if (reset) {
+      page = 1;
+      hasMore = true;
+      clientesMap.clear();
+      clientes.clear();
+    }
+
+    if (!hasMore) return;
+
+    if (page == 1 && reset) {
+      setState(() => loading = true);
+    } else {
+      setState(() => loadingMore = true);
+    }
+
+    final res = await api.get('/clientes?pagina=$page&limite=$limit');
     if (res.statusCode == 200) {
-      final data = jsonDecode(res.body) as List<dynamic>;
-      final Map<String, Map<String, dynamic>> grouped = {};
+      final Map<String, dynamic> body = jsonDecode(res.body);
+      final data = body['dados'] as List<dynamic>;
+      final int total = body['total'] as int? ?? data.length;
 
       for (final row in data) {
         final id = row['id_cliente'].toString();
-        grouped.putIfAbsent(id, () {
+        clientesMap.putIfAbsent(id, () {
           return {
             'id_cliente': id,
             'nome': row['nome_cliente'],
@@ -51,12 +80,12 @@ class _ClientesPageState extends State<ClientesPage> {
           'potencial_compra': (row['potencial_compra'] as num?)?.toDouble() ?? 0,
           'valor_comprado': (row['valor_comprado'] as num?)?.toDouble() ?? 0,
         };
-        grouped[id]!['grupos'].add(grupo);
-        grouped[id]!['totalPotencial'] += grupo['potencial_compra'];
-        grouped[id]!['totalComprado'] += grupo['valor_comprado'];
+        clientesMap[id]!['grupos'].add(grupo);
+        clientesMap[id]!['totalPotencial'] += grupo['potencial_compra'];
+        clientesMap[id]!['totalComprado'] += grupo['valor_comprado'];
       }
 
-      clientes = grouped.values.map((c) {
+      clientes = clientesMap.values.map((c) {
         final totalPotencial = c['totalPotencial'] as double;
         final totalComprado = c['totalComprado'] as double;
         final progresso = totalPotencial > 0
@@ -67,11 +96,25 @@ class _ClientesPageState extends State<ClientesPage> {
           'progresso': progresso,
         };
       }).toList();
-    } else {
-      clientes = [];
+
+      hasMore = clientes.length < total;
+      if (hasMore) page++;
     }
 
-    setState(() => loading = false);
+    if (page == 1) {
+      setState(() => loading = false);
+    } else {
+      setState(() => loadingMore = false);
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !loadingMore &&
+        hasMore) {
+      _loadClientes();
+    }
   }
 
   String _formatCurrency(double value) {
@@ -127,8 +170,9 @@ class _ClientesPageState extends State<ClientesPage> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadClientes,
+      onRefresh: () => _loadClientes(reset: true),
       child: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
@@ -164,7 +208,11 @@ class _ClientesPageState extends State<ClientesPage> {
                   ),
                   onTap: () => _openDetalhes(c),
                 ),
-              ))
+              )),
+          if (loadingMore) ...[
+            const SizedBox(height: 16),
+            const Center(child: CircularProgressIndicator()),
+          ]
         ],
       ),
     );
