@@ -1,8 +1,6 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import 'api_service.dart';
 
 class AgendaPage extends StatefulWidget {
@@ -14,7 +12,6 @@ class AgendaPage extends StatefulWidget {
 
 class _AgendaPageState extends State<AgendaPage> {
   final ApiService api = ApiService();
-
   DateTime semanaAtual = _inicioDaSemana(DateTime.now());
   List<dynamic> visitas = [];
   List<dynamic> clientes = [];
@@ -125,7 +122,7 @@ class _AgendaPageState extends State<AgendaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Agenda')),
+      appBar: AppBar(title: const Text('AgendaRep')),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -133,14 +130,6 @@ class _AgendaPageState extends State<AgendaPage> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Text(
-                    'Agenda Semanal de Visitas',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -181,9 +170,7 @@ class _AgendaPageState extends State<AgendaPage> {
     return TableRow(
       children: [
         const _HeaderCell('Hora'),
-        ...diasSemana
-            .map((d) => _HeaderCell(df.format(d)))
-            .toList(),
+        ...diasSemana.map((d) => _HeaderCell(df.format(d))).toList(),
       ],
     );
   }
@@ -199,10 +186,11 @@ class _AgendaPageState extends State<AgendaPage> {
 
   Widget _buildCelula(DateTime dia, String hora) {
     final dataStr = DateFormat('yyyy-MM-dd').format(dia);
-    final visitasHorario = visitas.where((v) {
-      return v['data'] == dataStr &&
-          (v['hora'] as String).substring(0, 5) == hora;
-    }).toList();
+    final visitasHorario = visitas
+        .where((v) =>
+            v['data'] == dataStr &&
+            (v['hora'] as String).substring(0, 5) == hora)
+        .toList();
     final visita = visitasHorario.isNotEmpty ? visitasHorario.first : null;
 
     final color = visita == null
@@ -230,51 +218,29 @@ class _AgendaPageState extends State<AgendaPage> {
           ),
         ),
         child: visita != null
-            ? Stack(
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (visita['nome_cliente'] ??
-                                visita['nome_cliente_temp'] ??
-                                '') as String,
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (visita['observacao'] != null &&
-                          visita['observacao'] != '')
-                        Text(
-                          visita['observacao'],
-                          style: const TextStyle(fontSize: 10),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
+                  Text(
+                    (visita['nome_cliente'] ??
+                        visita['nome_cliente_temp'] ??
+                        '') as String,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (visitasHorario.length > 1)
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurple,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '+${visitasHorario.length - 1}',
-                          style: const TextStyle(
-                              fontSize: 8, color: Colors.white),
-                        ),
-                      ),
+                  if (visita['observacao'] != null &&
+                      visita['observacao'] != '')
+                    Text(
+                      visita['observacao'],
+                      style: const TextStyle(fontSize: 10),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                 ],
               )
             : const Center(
-                child: Icon(Icons.add, size: 16, color: Colors.grey),
-              ),
+                child: Icon(Icons.add, size: 16, color: Colors.grey)),
       ),
     );
   }
@@ -318,81 +284,58 @@ class NovaVisitaDialog extends StatefulWidget {
 
 class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
   final ApiService api = ApiService();
-  Map<String, dynamic> novaVisita = {};
-  bool usandoTemp = false;
+  final TextEditingController obsController = TextEditingController();
+  String? clienteSelecionado;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Nova Visita'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile(
-              title: const Text('Cliente temporário'),
-              value: usandoTemp,
-              onChanged: (v) => setState(() => usandoTemp = v),
-            ),
-            if (!usandoTemp)
-              DropdownButtonFormField<int>(
-                decoration: const InputDecoration(labelText: 'Cliente'),
-                items: widget.clientes
-                    .map<DropdownMenuItem<int>>(
-                        (c) => DropdownMenuItem<int>(
-                              value: c['id_cliente'] as int,
-                              child: Text(c['nome']),
-                            ))
-                    .toList(),
-                onChanged: (v) =>
-                    novaVisita['id_cliente'] = v,
-              )
-            else ...[
-              TextField(
-                decoration:
-                    const InputDecoration(labelText: 'Nome do cliente'),
-                onChanged: (v) => novaVisita['nome_cliente_temp'] = v,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Telefone'),
-                onChanged: (v) => novaVisita['telefone_temp'] = v,
-              ),
-            ],
-            TextField(
-              decoration: const InputDecoration(labelText: 'Observação'),
-              maxLines: 3,
-              onChanged: (v) => novaVisita['observacao'] = v,
-            ),
-          ],
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(labelText: 'Cliente'),
+            items: widget.clientes
+                .map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
+                      value: c['id_cliente'].toString(),
+                      child: Text(c['nome']),
+                    ))
+                .toList(),
+            onChanged: (v) => clienteSelecionado = v,
+          ),
+          TextField(
+            controller: obsController,
+            decoration: const InputDecoration(labelText: 'Observação'),
+          ),
+        ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _salvar,
+          onPressed: () async {
+            await api.post('/visitas', {
+              'data': widget.data,
+              'hora': widget.hora,
+              'id_cliente': clienteSelecionado,
+              'observacao': obsController.text,
+            });
+            widget.onSalvo();
+          },
           child: const Text('Salvar'),
         ),
       ],
     );
-  }
-
-  Future<void> _salvar() async {
-    final dados = {
-      'data': widget.data,
-      'hora': widget.hora,
-      ...novaVisita,
-    };
-    await api.post('/visitas', dados);
-    widget.onSalvo();
   }
 }
 
 class ConfirmarVisitaDialog extends StatefulWidget {
   final Map visita;
   final VoidCallback onConfirmado;
+
   const ConfirmarVisitaDialog({
     super.key,
     required this.visita,
@@ -405,12 +348,12 @@ class ConfirmarVisitaDialog extends StatefulWidget {
 
 class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
   final ApiService api = ApiService();
-  late TextEditingController _obs;
+  late TextEditingController obs;
 
   @override
   void initState() {
     super.initState();
-    _obs = TextEditingController(text: widget.visita['observacao'] ?? '');
+    obs = TextEditingController(text: widget.visita['observacao'] ?? '');
   }
 
   @override
@@ -418,27 +361,25 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
     return AlertDialog(
       title: const Text('Confirmar Visita'),
       content: TextField(
-        controller: _obs,
+        controller: obs,
         maxLines: 3,
         decoration: const InputDecoration(labelText: 'Observação'),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _confirmar,
+          onPressed: () async {
+            final id = widget.visita['id'];
+            await api.put('/visitas/$id/observacao', {'observacao': obs.text});
+            await api.put('/visitas/$id/confirmar', {});
+            widget.onConfirmado();
+          },
           child: const Text('Confirmar'),
         ),
       ],
     );
-  }
-
-  Future<void> _confirmar() async {
-    final id = widget.visita['id'];
-    await api.put('/visitas/$id/observacao', {'observacao': _obs.text});
-    await api.put('/visitas/$id/confirmar', {});
-    widget.onConfirmado();
   }
 }

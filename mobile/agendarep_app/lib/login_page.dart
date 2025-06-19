@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'api_service.dart';
 
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -38,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
       'login': _loginController.text,
       'senha': _senhaController.text,
     });
+
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
       await api.setToken(data['token']);
@@ -59,66 +59,85 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AgendaRep'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/settings');
-            },
-          )
-        ],
-      ),
+      backgroundColor: Colors.blue[50],
       body: Center(
         child: SingleChildScrollView(
-          child: Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(24),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _loginController,
-                    decoration: const InputDecoration(labelText: 'Usuário'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _senhaController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Senha'),
-                  ),
-                  CheckboxListTile(
-                    title: const Text('Lembrar usuário'),
-                    value: _lembrarUsuario,
-                    onChanged: (v) {
-                      setState(() {
-                        _lembrarUsuario = v ?? false;
-                      });
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  if (erro != null) ...[
-                    const SizedBox(height: 12),
-                    Text(erro!, style: const TextStyle(color: Colors.red)),
-                  ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _fazerLogin,
-                      child: const Text('Entrar'),
-                    ),
-                  ),
-                ],
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.calendar_today, size: 80, color: Colors.blue),
+              const SizedBox(height: 12),
+              const Text(
+                "AgendaRep",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-            ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 8),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _loginController,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuário',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _senhaController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Senha',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _lembrarUsuario,
+                          onChanged: (v) {
+                            setState(() {
+                              _lembrarUsuario = v ?? false;
+                            });
+                          },
+                        ),
+                        const Text('Lembrar usuário'),
+                      ],
+                    ),
+                    if (erro != null) ...[
+                      const SizedBox(height: 12),
+                      Text(erro!, style: const TextStyle(color: Colors.red)),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _fazerLogin,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: Colors.blue[800],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text("Entrar",
+                            style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
