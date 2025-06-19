@@ -30,7 +30,7 @@ import {
     ListItem,
     CircularProgress,
 } from "@mui/material"
-import { Search, MoreHoriz, Visibility, Edit, Person } from "@mui/icons-material"
+import { Search, MoreHoriz, Visibility, Edit, Person, MonetizationOn, TrendingUp } from "@mui/icons-material"
 import { useState, useEffect } from "react"
 import { jwtDecode } from "jwt-decode"
 import { useClientes } from "../hooks/useClientes"
@@ -125,8 +125,23 @@ export default function Clientes() {
         progresso: cliente.totalPotencial > 0 ? Math.round((cliente.totalComprado / cliente.totalPotencial) * 100) : 0,
     })) as ClienteAgrupado[]
 
-    // Filtrar clientes
-    const clientesFiltrados = clientesArray.filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
+    // Filtrar e ordenar clientes por potencial (maior para menor)
+    const clientesFiltrados = clientesArray
+        .filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
+        .sort((a, b) => b.totalPotencial - a.totalPotencial)
+
+    // Calcular totalizadores
+    const totalizadores = clientesFiltrados.reduce(
+        (acc, cliente) => ({
+            totalClientes: acc.totalClientes + 1,
+            totalPotencial: acc.totalPotencial + cliente.totalPotencial,
+            totalComprado: acc.totalComprado + cliente.totalComprado,
+        }),
+        { totalClientes: 0, totalPotencial: 0, totalComprado: 0 },
+    )
+
+    // Remover esta linha completamente:
+    // totalizadores.mediaProgresso = totalizadores.totalClientes > 0 ? Math.round(totalizadores.mediaProgresso / totalizadores.totalClientes) : 0
 
     // Handlers do menu
     const handleMenuClick = (event: React.MouseEvent<HTMLElement>, cliente: ClienteAgrupado) => {
@@ -268,6 +283,62 @@ export default function Clientes() {
                         ))}
                     </TextField>
                 )}
+            </Box>
+
+            {/* Totalizadores */}
+            <Box
+                sx={{
+                    display: "flex",
+                    gap: 2,
+                    mb: 3,
+                    flexWrap: "nowrap", // Força os cards a ficarem na mesma linha
+                    "& > *": {
+                        flex: "1 1 0", // Distribui igualmente o espaço
+                        minWidth: 0, // Remove minWidth que estava forçando quebra
+                    },
+                }}
+            >
+                <Paper elevation={0} sx={{ border: "1px solid #e5e7eb", p: 1.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <Person sx={{ fontSize: 24, color: "#6366f1" }} />
+                        <Box>
+                            <Typography variant="h5" sx={{ fontWeight: 700, color: "#1f2937", lineHeight: 1 }}>
+                                {totalizadores.totalClientes}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                                Total de Clientes
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Paper>
+
+                <Paper elevation={0} sx={{ border: "1px solid #e5e7eb", p: 1.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <MonetizationOn sx={{ fontSize: 24, color: "#f59e0b" }} />
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1f2937", lineHeight: 1 }}>
+                                {formatarMoeda(totalizadores.totalPotencial)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                                Potencial Total
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Paper>
+
+                <Paper elevation={0} sx={{ border: "1px solid #e5e7eb", p: 1.5 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                        <TrendingUp sx={{ fontSize: 24, color: "#10b981" }} />
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: "#1f2937", lineHeight: 1 }}>
+                                {formatarMoeda(totalizadores.totalComprado)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                                Total Comprado
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Paper>
             </Box>
 
             {/* Tabela */}

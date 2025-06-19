@@ -13,25 +13,20 @@ import {
     ListItemIcon,
     Chip,
 } from "@mui/material"
-import {
-    People,
-    CalendarMonth,
-    MonetizationOn,
-    Dashboard as DashboardIcon,
-    CheckCircle,
-    Schedule,
-    TrendingUp,
-} from "@mui/icons-material"
+import { People, CalendarMonth, MonetizationOn, Dashboard as DashboardIcon, TrendingUp } from "@mui/icons-material"
+import { CheckCircle, Schedule } from "@mui/icons-material"
 import axios from "axios"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 import { jwtDecode } from "jwt-decode"
-import { API_URL } from "../services/api"
+
+const API = import.meta.env.VITE_API_URL
 
 export default function Dashboard() {
     const [clientes, setClientes] = useState<any[]>([])
     const [visitas, setVisitas] = useState<any[]>([])
     const [potencialTotal, setPotencialTotal] = useState(0)
+    const [totalComprado, setTotalComprado] = useState(0)
     const [representantes, setRepresentantes] = useState<any[]>([])
     const [repSelecionado, setRepSelecionado] = useState("")
     const [perfil, setPerfil] = useState("")
@@ -45,23 +40,25 @@ export default function Dashboard() {
             if (repSelecionado) params.codusuario = repSelecionado
 
             // Carregar clientes
-            const resClientes = await axios.get(`${API_URL}/clientes`, {
+            const resClientes = await axios.get(`${API}/clientes`, {
                 params,
                 headers: { Authorization: `Bearer ${token}` },
             })
             const dadosClientes = resClientes.data.map((l: any) => ({
                 ...l,
                 potencial_compra: Number(l.potencial_compra),
+                valor_comprado: Number(l.valor_comprado),
             }))
             setClientes(dadosClientes)
             setPotencialTotal(dadosClientes.reduce((s: number, c: any) => s + c.potencial_compra, 0))
+            setTotalComprado(dadosClientes.reduce((s: number, c: any) => s + c.valor_comprado, 0))
 
             // Carregar visitas da semana
             const inicio = dayjs().startOf("week").format("YYYY-MM-DD")
             const fim = dayjs().endOf("week").format("YYYY-MM-DD")
             const paramsVisitas: any = { inicio, fim }
             if (repSelecionado) paramsVisitas.codusuario = repSelecionado
-            const resVisitas = await axios.get(`${API_URL}/visitas`, {
+            const resVisitas = await axios.get(`${API}/visitas`, {
                 params: paramsVisitas,
                 headers: { Authorization: `Bearer ${token}` },
             })
@@ -74,7 +71,7 @@ export default function Dashboard() {
     }
 
     const carregarRepresentantes = async () => {
-        const res = await axios.get(`${API_URL}/usuarios/representantes`, {
+        const res = await axios.get(`${API}/usuarios/representantes`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
@@ -155,110 +152,121 @@ export default function Dashboard() {
                 </Box>
             )}
 
-            {/* Cards de estatísticas */}
+            {/* 1ª Linha - Cards principais */}
             <Box
                 sx={{
                     display: "flex",
-                    gap: 3,
-                    mb: 4,
-                    flexWrap: "wrap",
+                    gap: 2,
+                    mb: 3,
+                    flexWrap: "nowrap",
                     "& > *": {
-                        flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 calc(25% - 18px)" },
-                        minWidth: 250,
+                        flex: "1 1 0",
+                        minWidth: 0,
                     },
                 }}
             >
                 <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
-                    <CardContent sx={{ textAlign: "center", p: 3 }}>
-                        <People sx={{ fontSize: 48, color: "#6366f1", mb: 2 }} />
-                        <Typography variant="h3" sx={{ fontWeight: 700, color: "#1f2937", mb: 1 }}>
+                    <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <People sx={{ fontSize: 32, color: "#6366f1", mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: "#1f2937", mb: 0.5, lineHeight: 1 }}>
                             {qtdClientes}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
                             Clientes Ativos
                         </Typography>
                     </CardContent>
                 </Card>
 
                 <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
-                    <CardContent sx={{ textAlign: "center", p: 3 }}>
-                        <CalendarMonth sx={{ fontSize: 48, color: "#10b981", mb: 2 }} />
-                        <Typography variant="h3" sx={{ fontWeight: 700, color: "#1f2937", mb: 1 }}>
-                            {visitas.length}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Visitas na Semana
-                        </Typography>
-                    </CardContent>
-                </Card>
-
-                <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
-                    <CardContent sx={{ textAlign: "center", p: 3 }}>
-                        <MonetizationOn sx={{ fontSize: 48, color: "#f59e0b", mb: 2 }} />
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1f2937", mb: 1 }}>
+                    <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <MonetizationOn sx={{ fontSize: 32, color: "#f59e0b", mb: 1 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1f2937", mb: 0.5, lineHeight: 1 }}>
                             {formatarMoeda(potencialTotal)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
                             Potencial Total
                         </Typography>
                     </CardContent>
                 </Card>
 
                 <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
-                    <CardContent sx={{ textAlign: "center", p: 3 }}>
-                        <TrendingUp sx={{ fontSize: 48, color: "#8b5cf6", mb: 2 }} />
-                        <Typography variant="h3" sx={{ fontWeight: 700, color: "#1f2937", mb: 1 }}>
+                    <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <TrendingUp sx={{ fontSize: 32, color: "#10b981", mb: 1 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1f2937", mb: 0.5, lineHeight: 1 }}>
+                            {formatarMoeda(totalComprado)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                            Total Comprado
+                        </Typography>
+                    </CardContent>
+                </Card>
+            </Box>
+
+            {/* 2ª Linha - Cards de visitas */}
+            <Box
+                sx={{
+                    display: "flex",
+                    gap: 2,
+                    mb: 3,
+                    flexWrap: "nowrap",
+                    "& > *": {
+                        flex: "1 1 0",
+                        minWidth: 0,
+                    },
+                }}
+            >
+                <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
+                    <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <CalendarMonth sx={{ fontSize: 32, color: "#8b5cf6", mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: "#1f2937", mb: 0.5, lineHeight: 1 }}>
+                            {visitas.length}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                            Visitas na Semana
+                        </Typography>
+                    </CardContent>
+                </Card>
+
+                <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
+                    <CardContent sx={{ textAlign: "center", p: 2 }}>
+                        <CheckCircle sx={{ fontSize: 32, color: "#10b981", mb: 1 }} />
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: "#1f2937", mb: 0.5, lineHeight: 1 }}>
                             {visitasConfirmadas}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
                             Visitas Confirmadas
                         </Typography>
                     </CardContent>
                 </Card>
-            </Box>
 
-            {/* Resumo de visitas */}
-            <Box
-                sx={{
-                    display: "flex",
-                    gap: 3,
-                    mb: 4,
-                    flexDirection: { xs: "column", md: "row" },
-                }}
-            >
-                <Card elevation={0} sx={{ border: "1px solid #e5e7eb", flex: 1 }}>
-                    <CardContent sx={{ p: 3 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "#1f2937" }}>
+                <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
+                    <CardContent sx={{ p: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1, color: "#1f2937", fontSize: "0.9rem" }}>
                             Status das Visitas
                         </Typography>
-                        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                        <Box sx={{ display: "flex", gap: 0.5, flexDirection: "column", alignItems: "center" }}>
                             <Chip
-                                icon={<CheckCircle />}
+                                icon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
                                 label={`${visitasConfirmadas} Confirmadas`}
                                 color="success"
                                 variant="outlined"
+                                size="small"
+                                sx={{ fontSize: "0.7rem", height: 24 }}
                             />
-                            <Chip icon={<Schedule />} label={`${visitasPendentes} Pendentes`} color="warning" variant="outlined" />
+                            <Chip
+                                icon={<Schedule sx={{ fontSize: "14px !important" }} />}
+                                label={`${visitasPendentes} Pendentes`}
+                                color="warning"
+                                variant="outlined"
+                                size="small"
+                                sx={{ fontSize: "0.7rem", height: 24 }}
+                            />
                         </Box>
-                    </CardContent>
-                </Card>
-
-                <Card elevation={0} sx={{ border: "1px solid #e5e7eb", flex: 1 }}>
-                    <CardContent sx={{ p: 3 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "#1f2937" }}>
-                            Resumo da Semana
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Período: {dayjs().startOf("week").format("DD/MM")} a {dayjs().endOf("week").format("DD/MM/YYYY")}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Total de {visitas.length} visitas agendadas
-                        </Typography>
                     </CardContent>
                 </Card>
             </Box>
 
-            {/* Atividades recentes */}
+            {/* 3ª Linha - Atividades recentes */}
             <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
                 <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: "#1f2937" }}>
