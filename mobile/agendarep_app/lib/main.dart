@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'home_page.dart';
 import 'login_page.dart';
-import 'agenda_page.dart';
 import 'settings_page.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class AgendaRepApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.deepPurple),
       routes: {
         '/': (context) => const LoginPage(),
-        '/agenda': (context) => const AgendaPage(),
+        '/home': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
       },
     );
