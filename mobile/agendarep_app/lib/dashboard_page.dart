@@ -71,6 +71,11 @@ class _DashboardPageState extends State<DashboardPage> {
       }
     } finally {
       setState(() => loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dados carregados')),
+        );
+      }
     }
   }
 
