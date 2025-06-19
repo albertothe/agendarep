@@ -78,8 +78,10 @@ class _ClientesPageState extends State<ClientesPage> {
         final grupo = {
           'id_grupo': row['id_grupo'],
           'nome_grupo': row['nome_grupo'],
-          'potencial_compra': (row['potencial_compra'] as num?)?.toDouble() ?? 0,
-          'valor_comprado': (row['valor_comprado'] as num?)?.toDouble() ?? 0,
+          'potencial_compra':
+              double.tryParse(row['potencial_compra'].toString()) ?? 0.0,
+          'valor_comprado':
+              double.tryParse(row['valor_comprado'].toString()) ?? 0.0,
         };
         clientesMap[id]!['grupos'].add(grupo);
         clientesMap[id]!['totalPotencial'] += grupo['potencial_compra'];
