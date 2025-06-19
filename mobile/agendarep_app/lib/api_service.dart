@@ -7,7 +7,11 @@ class ApiService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<String> getBaseUrl() async {
-    return await _storage.read(key: 'base_url') ?? _defaultBaseUrl;
+    final url = await _storage.read(key: 'base_url') ?? _defaultBaseUrl;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return 'http://$url';
+    }
+    return url;
   }
 
   Future<void> setBaseUrl(String url) async {
@@ -47,22 +51,24 @@ class ApiService {
   Future<http.Response> get(String path) async {
     final baseUrl = await getBaseUrl();
     final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final headers = <String, String>{};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    final response = await http.get(Uri.parse('$baseUrl$path'), headers: headers);
     return response;
   }
 
   Future<http.Response> put(String path, Map<String, dynamic> data) async {
     final baseUrl = await getBaseUrl();
     final token = await getToken();
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
     final response = await http.put(
       Uri.parse('$baseUrl$path'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+      headers: headers,
       body: jsonEncode(data),
     );
     return response;
