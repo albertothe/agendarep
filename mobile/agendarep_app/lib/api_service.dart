@@ -53,4 +53,18 @@ class ApiService {
     );
     return response;
   }
+
+  Future<http.Response> put(String path, Map<String, dynamic> data) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse('$baseUrl$path'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(data),
+    );
+    return response;
+  }
 }
