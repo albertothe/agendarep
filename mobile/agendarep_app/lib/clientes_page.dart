@@ -55,11 +55,12 @@ class _ClientesPageState extends State<ClientesPage> {
       setState(() => loadingMore = true);
     }
 
-    final res = await api.get('/clientes?pagina=$page&limite=$limit');
+    // A API do backend retorna a lista completa de clientes sem paginacao.
+    // Ajustamos a leitura para funcionar com esse formato.
+    final res = await api.get('/clientes');
     if (res.statusCode == 200) {
-      final Map<String, dynamic> body = jsonDecode(res.body);
-      final data = body['dados'] as List<dynamic>;
-      final int total = body['total'] as int? ?? data.length;
+      final List<dynamic> data = jsonDecode(res.body);
+      final int total = data.length;
 
       for (final row in data) {
         final id = row['id_cliente'].toString();
