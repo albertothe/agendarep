@@ -73,11 +73,6 @@ class _DashboardPageState extends State<DashboardPage> {
       }
     } finally {
       setState(() => loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dados carregados')),
-        );
-      }
     }
   }
 
@@ -106,120 +101,201 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return RefreshIndicator(
       onRefresh: _loadData,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (perfil == 'coordenador' || perfil == 'diretor')
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: DropdownButtonFormField<String>(
-                value: repSelecionado.isEmpty ? null : repSelecionado,
-                decoration: const InputDecoration(labelText: 'Representante'),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('Todos')),
-                  ...representantes.map((r) => DropdownMenuItem(
-                        value: r['codusuario'].toString(),
-                        child: Text(r['nome']),
-                      ))
-                ],
-                onChanged: (v) {
-                  setState(() => repSelecionado = v ?? '');
-                  _loadData();
-                },
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            const Text(
+              'Painel Geral',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1f2937),
               ),
             ),
-          Row(
-            children: [
-              _buildCard('Clientes', qtdClientes.toString(), Icons.people),
-              _buildCard(
-                  'Potencial',
-                  NumberFormat.simpleCurrency(locale: 'pt_BR')
-                      .format(potencialTotal),
-                  Icons.monetization_on),
-              _buildCard(
-                  'Comprado',
-                  NumberFormat.simpleCurrency(locale: 'pt_BR')
-                      .format(totalComprado),
-                  Icons.trending_up),
-            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Visão geral das suas atividades, clientes\ne potencial de vendas.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF6b7280),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Filtro de representantes
+            if (perfil == 'coordenador' || perfil == 'diretor')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: DropdownButtonFormField<String>(
+                  value: repSelecionado.isEmpty ? null : repSelecionado,
+                  decoration: const InputDecoration(
+                    labelText: 'Representante',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Todos')),
+                    ...representantes.map((r) => DropdownMenuItem(
+                          value: r['codusuario'].toString(),
+                          child: Text(r['nome']),
+                        ))
+                  ],
+                  onChanged: (v) {
+                    setState(() => repSelecionado = v ?? '');
+                    _loadData();
+                  },
+                ),
+              ),
+
+            // Cards principais
+            _buildMetricCard(
+              icon: Icons.people,
+              iconColor: const Color(0xFF6366f1),
+              value: qtdClientes.toString(),
+              label: 'Clientes Ativos',
+            ),
+            const SizedBox(height: 20),
+
+            _buildMetricCard(
+              icon: Icons.attach_money,
+              iconColor: const Color(0xFFf59e0b),
+              value: NumberFormat.simpleCurrency(locale: 'pt_BR')
+                  .format(totalComprado),
+              label: '',
+            ),
+            const SizedBox(height: 20),
+
+            _buildMetricCard(
+              icon: Icons.calendar_today,
+              iconColor: const Color(0xFF6366f1),
+              value: NumberFormat.simpleCurrency(locale: 'pt_BR')
+                  .format(potencialTotal),
+              label: '',
+            ),
+            const SizedBox(height: 20),
+
+            _buildMetricCard(
+              icon: Icons.check_circle,
+              iconColor: const Color(0xFF10b981),
+              value: visitasConfirmadas.toString(),
+              label: 'Visitas Confirmadas',
+            ),
+            const SizedBox(height: 32),
+
+            // Status das Visitas
+            const Text(
+              'Status das Visitas',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1f2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10b981),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$visitasConfirmadas Confirmadas',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF1f2937),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 32),
+                Text(
+                  '$visitasPendentes Pendentes',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF1f2937),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // Lista de atividades recentes
+            ..._buildRecentActivities(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricCard({
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String label,
+  }) {
+    return Container(
+      width: double.infinity,
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildCard(
-                  'Visitas', visitas.length.toString(), Icons.calendar_today),
-              _buildCard('Confirmadas', visitasConfirmadas.toString(),
-                  Icons.check_circle),
-              _buildStatusCard(),
-            ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1f2937),
+                  ),
+                ),
+                if (label.isNotEmpty)
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Atividades recentes',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          ..._recentActivities(),
         ],
       ),
     );
   }
 
-  Widget _buildCard(String label, String value, IconData icon) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 32, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(label),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard() {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              const Text('Status',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  Chip(
-                    label: Text('$visitasConfirmadas Confirmadas'),
-                    backgroundColor: Colors.green.shade50,
-                  ),
-                  Chip(
-                    label: Text('$visitasPendentes Pendentes'),
-                    backgroundColor: Colors.orange.shade50,
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _recentActivities() {
+  List<Widget> _buildRecentActivities() {
     final sorted = List<Map<String, dynamic>>.from(visitas)
       ..sort((a, b) {
         final dateA = DateTime.parse(a['data']);
@@ -230,23 +306,80 @@ class _DashboardPageState extends State<DashboardPage> {
     final df = DateFormat('dd/MM/yyyy');
 
     return recent.map((v) {
-      final icon =
-          v['confirmado'] == true ? Icons.check_circle : Icons.schedule;
-      final color = v['confirmado'] == true ? Colors.green : Colors.orange;
       final cliente = v['nome_cliente'] ?? v['nome_cliente_temp'] ?? '';
       final data = df.format(DateTime.parse(v['data']));
       final hora = v['hora'];
-      final obs = v['observacao'];
-      return ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(
-            '${v['confirmado'] == true ? 'Visita confirmada' : 'Visita agendada'} com $cliente'),
-        subtitle: Column(
+      final obs = v['observacao'] ?? '';
+      final isConfirmado = v['confirmado'] == true;
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$data às $hora'),
-            if (obs != null && obs != '')
-              Text(obs, style: const TextStyle(fontSize: 12)),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isConfirmado
+                    ? const Color(0xFF10b981)
+                    : const Color(0xFFf59e0b),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isConfirmado ? Icons.check : Icons.schedule,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF1f2937),
+                      ),
+                      children: [
+                        TextSpan(
+                          text: isConfirmado
+                              ? 'Visita confirmada com '
+                              : 'Visita agendada com ',
+                        ),
+                        TextSpan(
+                          text: cliente,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (obs.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        obs,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF6b7280),
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${data}às $hora',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       );

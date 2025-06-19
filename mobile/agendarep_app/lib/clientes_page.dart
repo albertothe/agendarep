@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import 'api_service.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -55,59 +54,60 @@ class _ClientesPageState extends State<ClientesPage> {
       setState(() => loadingMore = true);
     }
 
-    // A API do backend retorna a lista completa de clientes sem paginacao.
-    // Ajustamos a leitura para funcionar com esse formato.
-    final res = await api.get('/clientes');
-    if (res.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(res.body);
-      final int total = data.length;
+    try {
+      final res = await api.get('/clientes');
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(res.body);
 
-      for (final row in data) {
-        final id = row['id_cliente'].toString();
-        clientesMap.putIfAbsent(id, () {
-          return {
-            'id_cliente': id,
-            'nome': row['nome_cliente'],
-            'telefone': row['telefone'],
-            'grupos': <Map<String, dynamic>>[],
-            'totalPotencial': 0.0,
-            'totalComprado': 0.0,
+        for (final row in data) {
+          final id = row['id_cliente'].toString();
+          clientesMap.putIfAbsent(
+              id,
+              () => {
+                    'id_cliente': id,
+                    'nome': row['nome_cliente'],
+                    'telefone': row['telefone'],
+                    'grupos': <Map<String, dynamic>>[],
+                    'totalPotencial': 0.0,
+                    'totalComprado': 0.0,
+                  });
+
+          final grupo = {
+            'id_grupo': row['id_grupo'],
+            'nome_grupo': row['nome_grupo'],
+            'potencial_compra':
+                double.tryParse(row['potencial_compra'].toString()) ?? 0.0,
+            'valor_comprado':
+                double.tryParse(row['valor_comprado'].toString()) ?? 0.0,
           };
-        });
 
-        final grupo = {
-          'id_grupo': row['id_grupo'],
-          'nome_grupo': row['nome_grupo'],
-          'potencial_compra':
-              double.tryParse(row['potencial_compra'].toString()) ?? 0.0,
-          'valor_comprado':
-              double.tryParse(row['valor_comprado'].toString()) ?? 0.0,
-        };
-        clientesMap[id]!['grupos'].add(grupo);
-        clientesMap[id]!['totalPotencial'] += grupo['potencial_compra'];
-        clientesMap[id]!['totalComprado'] += grupo['valor_comprado'];
+          clientesMap[id]!['grupos'].add(grupo);
+          clientesMap[id]!['totalPotencial'] += grupo['potencial_compra'];
+          clientesMap[id]!['totalComprado'] += grupo['valor_comprado'];
+        }
+
+        clientes = clientesMap.values.map((c) {
+          final totalPotencial = c['totalPotencial'] as double;
+          final totalComprado = c['totalComprado'] as double;
+          final progresso = totalPotencial > 0
+              ? ((totalComprado / totalPotencial) * 100).round()
+              : 0;
+          return {...c, 'progresso': progresso};
+        }).toList();
+
+        hasMore = false; // sem paginação real
+      } else {
+        debugPrint('Erro HTTP: ${res.statusCode}');
       }
-
-      clientes = clientesMap.values.map((c) {
-        final totalPotencial = c['totalPotencial'] as double;
-        final totalComprado = c['totalComprado'] as double;
-        final progresso = totalPotencial > 0
-            ? ((totalComprado / totalPotencial) * 100).round()
-            : 0;
-        return {
-          ...c,
-          'progresso': progresso,
-        };
-      }).toList();
-
-      hasMore = clientes.length < total;
-      if (hasMore) page++;
-    }
-
-    if (page == 1) {
-      setState(() => loading = false);
-    } else {
-      setState(() => loadingMore = false);
+    } catch (e, s) {
+      debugPrint('Erro ao carregar clientes: $e');
+      debugPrintStack(stackTrace: s);
+    } finally {
+      if (page == 1) {
+        setState(() => loading = false);
+      } else {
+        setState(() => loadingMore = false);
+      }
     }
   }
 
@@ -137,30 +137,41 @@ class _ClientesPageState extends State<ClientesPage> {
       isScrollControlled: true,
       builder: (_) {
         final grupos = cliente['grupos'] as List<dynamic>;
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                cliente['nome'],
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold),
+        return DraggableScrollableSheet(
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
               ),
-              const SizedBox(height: 8),
-              ...grupos.map((g) {
-                final pot = g['potencial_compra'] as double;
-                final comp = g['valor_comprado'] as double;
-                return ListTile(
-                  title: Text(g['nome_grupo'] ?? ''),
-                  subtitle: Text(
-                      'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}'),
-                );
-              }),
-              const SizedBox(height: 8),
-            ],
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    cliente['nome'],
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  ...grupos.map((g) {
+                    final pot = g['potencial_compra'] as double;
+                    final comp = g['valor_comprado'] as double;
+                    return ListTile(
+                      title: Text(g['nome_grupo'] ?? ''),
+                      subtitle: Text(
+                        'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}',
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -194,13 +205,11 @@ class _ClientesPageState extends State<ClientesPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (c['telefone'] != null)
-                        Text(c['telefone'], style: const TextStyle(fontSize: 12)),
+                        Text(c['telefone'],
+                            style: const TextStyle(fontSize: 12)),
                       Text(
-                        'Potencial: ${_formatCurrency(c['totalPotencial'])}',
-                      ),
-                      Text(
-                        'Comprado: ${_formatCurrency(c['totalComprado'])}',
-                      ),
+                          'Potencial: ${_formatCurrency(c['totalPotencial'])}'),
+                      Text('Comprado: ${_formatCurrency(c['totalComprado'])}'),
                     ],
                   ),
                   trailing: Column(
