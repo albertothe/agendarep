@@ -44,12 +44,14 @@ class _DashboardPageState extends State<DashboardPage> {
       if (token != null) {
         final data = Jwt.parseJwt(token);
         perfil = data['perfil'] ?? '';
-        if ((perfil == 'coordenador' || perfil == 'diretor') && representantes.isEmpty) {
+        if ((perfil == 'coordenador' || perfil == 'diretor') &&
+            representantes.isEmpty) {
           await _loadRepresentantes();
         }
       }
 
-      final clienteQuery = repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
+      final clienteQuery =
+          repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
       final resClientes = await api.get('/clientes$clienteQuery');
       if (resClientes.statusCode == 200) {
         clientes = jsonDecode(resClientes.body);
@@ -84,12 +86,16 @@ class _DashboardPageState extends State<DashboardPage> {
   int get visitasPendentes =>
       visitas.where((v) => v['confirmado'] != true).length;
   double get potencialTotal => clientes.fold(
-      0,
-      (sum, c) =>
-          sum + ((c['potencial_compra'] as num?)?.toDouble() ?? 0.0));
+        0,
+        (sum, c) =>
+            sum + (double.tryParse(c['potencial_compra'].toString()) ?? 0.0),
+      );
+
   double get totalComprado => clientes.fold(
-      0,
-      (sum, c) => sum + ((c['valor_comprado'] as num?)?.toDouble() ?? 0.0));
+        0,
+        (sum, c) =>
+            sum + (double.tryParse(c['valor_comprado'].toString()) ?? 0.0),
+      );
   int get qtdClientes => clientes.map((c) => c['id_cliente']).toSet().length;
 
   @override
@@ -190,7 +196,8 @@ class _DashboardPageState extends State<DashboardPage> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              const Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Status',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -215,21 +222,18 @@ class _DashboardPageState extends State<DashboardPage> {
   List<Widget> _recentActivities() {
     final sorted = List<Map<String, dynamic>>.from(visitas)
       ..sort((a, b) {
-        final dateA = DateTime.parse('${a['data']} ${a['hora']}');
-        final dateB = DateTime.parse('${b['data']} ${b['hora']}');
+        final dateA = DateTime.parse(a['data']);
+        final dateB = DateTime.parse(b['data']);
         return dateB.compareTo(dateA);
       });
     final recent = sorted.take(10);
     final df = DateFormat('dd/MM/yyyy');
 
     return recent.map((v) {
-      final icon = v['confirmado'] == true
-          ? Icons.check_circle
-          : Icons.schedule;
-      final color =
-          v['confirmado'] == true ? Colors.green : Colors.orange;
-      final cliente =
-          v['nome_cliente'] ?? v['nome_cliente_temp'] ?? '';
+      final icon =
+          v['confirmado'] == true ? Icons.check_circle : Icons.schedule;
+      final color = v['confirmado'] == true ? Colors.green : Colors.orange;
+      final cliente = v['nome_cliente'] ?? v['nome_cliente_temp'] ?? '';
       final data = df.format(DateTime.parse(v['data']));
       final hora = v['hora'];
       final obs = v['observacao'];
