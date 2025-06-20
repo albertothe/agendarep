@@ -1,11 +1,14 @@
+// src/services/api.ts
+
 import axios from "axios";
 
-// Base URL for API requests
-const envUrl = import.meta.env.VITE_API_URL || "http://10.5.59.85:8501";
-export const API_URL = envUrl.replace(
-  "10.5.59.85",
-  window.location.hostname,
-);
+// Detecta se o acesso é externo (porta pública 18500) ou interno (8500)
+const isExterno = window.location.port === "18500";
+
+// Define a porta correta para o backend com base no ambiente
+export const API_URL = isExterno
+  ? `http://${window.location.hostname}:18501`
+  : `http://${window.location.hostname}:8501`;
 
 export const api = axios.create({
   baseURL: API_URL,
