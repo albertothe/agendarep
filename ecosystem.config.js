@@ -3,9 +3,8 @@ module.exports = {
         {
             name: 'agendarep-backend',
             cwd: './backend',
-            script: './node_modules/.bin/ts-node.cmd',
-            args: 'src/index.ts',
-            interpreter: 'cmd.exe',
+            script: 'dist/server.js', // não use ts-node, use o build!
+            interpreter: 'node',
             env: {
                 NODE_ENV: 'production'
             }
