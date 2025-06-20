@@ -30,7 +30,7 @@ export default function Dashboard() {
     const [representantes, setRepresentantes] = useState<any[]>([])
     const [repSelecionado, setRepSelecionado] = useState("")
     const [perfil, setPerfil] = useState("")
-    const [loading, setLoading] = useState(true)
+    const [, setLoading] = useState(true)
     const token = localStorage.getItem("token")
 
     const carregar = async () => {

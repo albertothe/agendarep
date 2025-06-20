@@ -82,7 +82,7 @@ export default function Clientes() {
     const [usuario, setUsuario] = useState<Usuario | null>(null)
     const [salvando, setSalvando] = useState(false)
 
-    const { dados, representantes, repSelecionado, setRepSelecionado, loading, error, salvarPotencial, recarregar } =
+    const { dados, representantes, repSelecionado, setRepSelecionado, salvarPotencial, recarregar } =
         useClientes()
 
     // Decodificar token para obter perfil do usuário
@@ -498,7 +498,7 @@ export default function Clientes() {
                     </Typography>
 
                     <List sx={{ p: 0 }}>
-                        {clienteSelecionado?.grupos.map((grupo, index) => (
+                        {clienteSelecionado?.grupos.map((grupo) => (
                             <ListItem
                                 key={grupo.id_grupo}
                                 sx={{
