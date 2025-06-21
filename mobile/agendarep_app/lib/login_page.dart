@@ -126,12 +126,19 @@ class _LoginPageState extends State<LoginPage> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           backgroundColor: Colors.blue[800],
+                          foregroundColor: Colors.white, // Cor da fonte branca
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text("Entrar",
-                            style: TextStyle(fontSize: 16)),
+                        child: const Text(
+                          "Entrar",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors
+                                .white, // Garantindo que a cor seja branca
+                          ),
+                        ),
                       ),
                     ),
                   ],

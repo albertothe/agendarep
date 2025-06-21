@@ -26,7 +26,7 @@ class _AgendaPageState extends State<AgendaPage> {
   static List<String> _gerarHoras() {
     final inicio = DateTime(0, 1, 1, 8, 0);
     final fim = DateTime(0, 1, 1, 17, 0);
-    final horas = fim.difference(inicio).inHours + 1; // inclui o horário final
+    final horas = fim.difference(inicio).inHours + 1;
     return List.generate(horas, (i) {
       final t = inicio.add(Duration(hours: i));
       final h = t.hour.toString().padLeft(2, '0');
@@ -48,40 +48,67 @@ class _AgendaPageState extends State<AgendaPage> {
       List.generate(7, (i) => semanaAtual.add(Duration(days: i)));
 
   Future<void> _loadRepresentantes() async {
-    final res = await api.get('/usuarios/representantes');
-    if (res.statusCode == 200) {
-      representantes = jsonDecode(res.body);
+    try {
+      final res = await api.get('/usuarios/representantes');
+      if (res.statusCode == 200) {
+        setState(() {
+          representantes = jsonDecode(res.body);
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar representantes: $e');
     }
   }
 
   Future<void> _carregarDados() async {
     setState(() => loading = true);
-    final token = await api.getToken();
-    if (token != null) {
-      final data = Jwt.parseJwt(token);
-      perfil = data['perfil'] ?? '';
-      if ((perfil == 'coordenador' || perfil == 'diretor') &&
-          representantes.isEmpty) {
-        await _loadRepresentantes();
-      }
-    }
 
-    await Future.wait([_carregarVisitas(), _carregarClientes()]);
-    setState(() => loading = false);
+    try {
+      final token = await api.getToken();
+      if (token != null) {
+        final data = Jwt.parseJwt(token);
+        perfil = data['perfil'] ?? '';
+        if ((perfil == 'coordenador' || perfil == 'diretor') &&
+            representantes.isEmpty) {
+          await _loadRepresentantes();
+        }
+      }
+
+      await Future.wait([_carregarVisitas(), _carregarClientes()]);
+    } catch (e) {
+      debugPrint('Erro ao carregar dados: $e');
+    } finally {
+      setState(() => loading = false);
+    }
   }
 
   Future<void> _carregarVisitas() async {
-    final df = DateFormat('yyyy-MM-dd');
-    final inicio = df.format(semanaAtual);
-    final fim = df.format(semanaAtual.add(const Duration(days: 6)));
-    final repQuery =
-        repSelecionado.isNotEmpty ? '&codusuario=$repSelecionado' : '';
-    final res = await api.get('/visitas?inicio=$inicio&fim=$fim$repQuery');
-    if (res.statusCode == 200) {
-      setState(() {
-        visitas = jsonDecode(res.body);
-      });
-    } else {
+    try {
+      final df = DateFormat('yyyy-MM-dd');
+      final inicio = df.format(semanaAtual);
+      final fim = df.format(semanaAtual.add(const Duration(days: 6)));
+      final repQuery =
+          repSelecionado.isNotEmpty ? '&codusuario=$repSelecionado' : '';
+
+      final url = '/visitas?inicio=$inicio&fim=$fim$repQuery';
+      debugPrint('🔄 Carregando visitas: $inicio até $fim');
+
+      final res = await api.get(url);
+
+      if (res.statusCode == 200) {
+        final visitasData = jsonDecode(res.body) as List;
+        setState(() {
+          visitas = visitasData;
+        });
+        debugPrint('✅ ${visitas.length} visitas carregadas');
+      } else {
+        debugPrint('❌ Erro HTTP: ${res.statusCode}');
+        setState(() {
+          visitas = [];
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Erro ao carregar visitas: $e');
       setState(() {
         visitas = [];
       });
@@ -89,15 +116,22 @@ class _AgendaPageState extends State<AgendaPage> {
   }
 
   Future<void> _carregarClientes() async {
-    final repQuery =
-        repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
-    final res =
-        await api.get('/visitas/clientes/representante$repQuery');
-    if (res.statusCode == 200) {
-      setState(() {
-        clientes = jsonDecode(res.body);
-      });
-    } else {
+    try {
+      final repQuery =
+          repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
+      final res = await api.get('/visitas/clientes/representante$repQuery');
+
+      if (res.statusCode == 200) {
+        setState(() {
+          clientes = jsonDecode(res.body);
+        });
+      } else {
+        setState(() {
+          clientes = [];
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar clientes: $e');
       setState(() {
         clientes = [];
       });
@@ -157,237 +191,401 @@ class _AgendaPageState extends State<AgendaPage> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
+        backgroundColor: Color(0xFFF5F6FA),
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F6FA),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _carregarDados,
-          child: ListView(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                children: [
-                  const Text('AgendaRep',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header padronizado
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'AgendaRep',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
                         fontSize: 20,
-                        color: Colors.indigo,
-                      )),
-                  const Spacer(),
-                  PopupMenuButton<String>(
-                    icon: const CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.deepPurple,
-                      child: Text('V', style: TextStyle(color: Colors.white)),
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366f1),
+                      ),
                     ),
-                    onSelected: (value) async {
-                      if (value == 'logout') {
-                        await api.setToken('');
-                        if (!mounted) return;
-                        Navigator.pushReplacementNamed(context, '/');
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'logout',
-                        child: Text('Sair'),
+                    PopupMenuButton<String>(
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: const Color(0xFF6366f1),
+                        child: const Text(
+                          'V',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'logout') {
+                          await api.setToken('');
+                          if (!mounted) return;
+                          Navigator.pushReplacementNamed(context, '/');
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem<String>(
+                          value: 'logout',
+                          child: Text('Sair'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Título e subtítulo padronizados
+                const Text(
+                  'Agenda Semanal',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1f2937),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Gerencie suas visitas a clientes para a semana. Clique em um horário para agendar uma nova visita.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF6b7280),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Filtro de representantes
+                if (perfil == 'coordenador' || perfil == 'diretor')
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: repSelecionado.isEmpty ? null : repSelecionado,
+                      decoration: const InputDecoration(
+                        labelText: 'Representante',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: '', child: Text('Todos')),
+                        ...representantes.map((r) => DropdownMenuItem(
+                              value: r['codusuario'].toString(),
+                              child: Text(r['nome']),
+                            ))
+                      ],
+                      onChanged: (v) {
+                        setState(() => repSelecionado = v ?? '');
+                        _carregarDados();
+                      },
+                    ),
+                  ),
+
+                // Controles de navegação da semana
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (perfil == 'coordenador' || perfil == 'diretor')
-                DropdownButtonFormField<String>(
-                  value: repSelecionado.isEmpty ? null : repSelecionado,
-                  decoration: const InputDecoration(
-                    labelText: 'Representante',
-                    border: OutlineInputBorder(),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: _semanaAnterior,
+                        icon: const Icon(Icons.chevron_left, size: 28),
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366f1),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        _tituloSemana(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1f2937),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _proximaSemana,
+                        icon: const Icon(Icons.chevron_right, size: 28),
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366f1),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
-                  items: [
-                    const DropdownMenuItem(value: '', child: Text('Todos')),
-                    ...representantes.map((r) => DropdownMenuItem(
-                          value: r['codusuario'].toString(),
-                          child: Text(r['nome']),
-                        ))
-                  ],
-                  onChanged: (v) {
-                    setState(() => repSelecionado = v ?? '');
-                    _carregarDados();
-                  },
                 ),
-              if (perfil == 'coordenador' || perfil == 'diretor')
+
                 const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    onPressed: _semanaAnterior,
-                    icon: const Icon(Icons.chevron_left),
+
+                // Grid da agenda
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  Text(
-                    _tituloSemana(),
-                    style: Theme.of(context).textTheme.titleMedium,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DataTable(
+                        columnSpacing: 4,
+                        horizontalMargin: 8,
+                        headingRowHeight: 50,
+                        dataRowHeight: 80,
+                        headingRowColor: MaterialStateProperty.all(
+                          const Color(0xFFF8FAFC),
+                        ),
+                        border: TableBorder(
+                          horizontalInside: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                          verticalInside: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        columns: [
+                          const DataColumn(
+                            label: SizedBox(
+                              width: 60,
+                              child: Text(
+                                'Hora',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF374151),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          ...diasSemana.map((dia) {
+                            final df = DateFormat('EEE dd/MM', 'pt_BR');
+                            return DataColumn(
+                              label: SizedBox(
+                                width: 100,
+                                child: Text(
+                                  df.format(dia),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF374151),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                        rows:
+                            horas.map((hora) => _buildLinhaHora(hora)).toList(),
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    onPressed: _proximaSemana,
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Table(
-                  defaultColumnWidth: const IntrinsicColumnWidth(),
-                  border: TableBorder.all(color: Colors.grey.shade300),
-                  children: [
-                    _buildHeaderRow(),
-                    ...horas.map(_buildLinhaHora),
-                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              const Text('Visitas Marcadas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ..._buildListaVisitas(),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  TableRow _buildHeaderRow() {
-    final df = DateFormat('EEE dd/MM', 'pt_BR');
-    return TableRow(
-      children: [
-        const _HeaderCell('Hora'),
-        ...diasSemana.map((d) => _HeaderCell(df.format(d))).toList(),
-      ],
-    );
-  }
-
-  TableRow _buildLinhaHora(String hora) {
-    return TableRow(
-      children: [
-        _HeaderCell(hora),
+  DataRow _buildLinhaHora(String hora) {
+    return DataRow(
+      cells: [
+        DataCell(
+          Container(
+            width: 60,
+            height: 70,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border(
+                right: BorderSide(
+                  color: Colors.grey.shade300,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                hora,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6b7280),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ),
         ...diasSemana.map((dia) => _buildCelula(dia, hora)).toList(),
       ],
     );
   }
 
-  Widget _buildCelula(DateTime dia, String hora) {
+  DataCell _buildCelula(DateTime dia, String hora) {
     final dataStr = DateFormat('yyyy-MM-dd').format(dia);
-    final visitasHorario = visitas
-        .where((v) =>
-            v['data'] == dataStr &&
-            (v['hora'] as String).substring(0, 5) == hora)
-        .toList();
+
+    final visitasHorario = visitas.where((v) {
+      final visitaData = v['data']?.toString() ?? '';
+      final visitaHora = v['hora']?.toString() ?? '';
+
+      // Normalizar hora para comparação (pegar apenas HH:mm)
+      String horaVisita = visitaHora;
+      if (visitaHora.contains(':')) {
+        final parts = visitaHora.split(':');
+        if (parts.length >= 2) {
+          horaVisita =
+              '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+        }
+      }
+
+      final match = visitaData == dataStr && horaVisita == hora;
+
+      // Debug apenas quando encontrar visita
+      if (match) {
+        debugPrint(
+            '✅ Visita encontrada: $dataStr $hora - ${v['nome_cliente'] ?? v['nome_cliente_temp']}');
+      }
+
+      return match;
+    }).toList();
+
     final visita = visitasHorario.isNotEmpty ? visitasHorario.first : null;
 
-    final color = visita == null
-        ? Colors.white
-        : (visita['confirmado'] == true
-            ? Colors.green.shade50
-            : Colors.blue.shade50);
+    Color backgroundColor = Colors.white;
+    Color borderColor = Colors.grey.shade300;
 
-    return GestureDetector(
-      onTap: () {
-        if (visita != null) {
-          _abrirConfirmar(visita);
-        } else {
-          _abrirNovaVisita(dataStr, hora);
-        }
-      },
-      child: Container(
-        height: 70,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: color,
-          border: Border(
-            right: BorderSide(color: Colors.grey.shade300),
-            bottom: BorderSide(color: Colors.grey.shade300),
+    if (visita != null) {
+      if (visita['confirmado'] == true) {
+        backgroundColor = const Color(0xFFDCFCE7); // Verde claro
+        borderColor = const Color(0xFF16A34A); // Verde
+      } else {
+        backgroundColor = const Color(0xFFDEF7FF); // Azul claro
+        borderColor = const Color(0xFF0EA5E9); // Azul
+      }
+    }
+
+    return DataCell(
+      GestureDetector(
+        onTap: () {
+          if (visita != null) {
+            _abrirConfirmar(visita);
+          } else {
+            _abrirNovaVisita(dataStr, hora);
+          }
+        },
+        child: Container(
+          width: 100,
+          height: 70,
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: borderColor,
+              width: visita != null ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
-        ),
-        child: visita != null
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    (visita['nome_cliente'] ??
-                        visita['nome_cliente_temp'] ??
-                        '') as String,
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (visita['observacao'] != null &&
-                      visita['observacao'] != '')
+          child: visita != null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      visita['observacao'],
-                      style: const TextStyle(fontSize: 10),
-                      maxLines: 2,
+                      (visita['nome_cliente'] ??
+                          visita['nome_cliente_temp'] ??
+                          'Cliente') as String,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: visita['confirmado'] == true
+                            ? const Color(0xFF15803D)
+                            : const Color(0xFF0369A1),
+                      ),
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
                     ),
-                ],
-              )
-            : const Center(
-                child: Icon(Icons.add, size: 16, color: Colors.grey)),
-      ),
-    );
-  }
-
-  List<Widget> _buildListaVisitas() {
-    final sorted = List<Map<String, dynamic>>.from(visitas)
-      ..sort((a, b) =>
-          DateTime.parse(a['data']).compareTo(DateTime.parse(b['data'])));
-    final df = DateFormat('dd/MM/yyyy');
-
-    return sorted.map((v) {
-      final cliente = v['nome_cliente'] ?? v['nome_cliente_temp'] ?? '';
-      final data = df.format(DateTime.parse(v['data']));
-      final hora = v['hora'];
-      final obs = v['observacao'] ?? '';
-      final isConfirmado = v['confirmado'] == true;
-
-      return ListTile(
-        leading: Icon(
-          isConfirmado ? Icons.check_circle : Icons.schedule,
-          color: isConfirmado ? Colors.green : Colors.orange,
+                    if (visita['confirmado'] == true)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Center(
+                          child: Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF16A34A),
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                )
+              : const Center(
+                  child: Icon(
+                    Icons.add,
+                    size: 20,
+                    color: Color(0xFF9ca3af),
+                  ),
+                ),
         ),
-        title: Text('$cliente - $hora'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(data),
-            if (obs.isNotEmpty) Text(obs),
-          ],
-        ),
-        onTap: () => _abrirConfirmar(v),
-      );
-    }).toList();
-  }
-}
-
-class _HeaderCell extends StatelessWidget {
-  final String text;
-  const _HeaderCell(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      alignment: Alignment.center,
-      color: Colors.grey.shade100,
-      child: Text(
-        text,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
@@ -418,72 +616,235 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
   final TextEditingController telefoneTempController = TextEditingController();
   String? clienteSelecionado;
   bool clienteTemporario = false;
+  bool salvando = false;
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nova Visita'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SwitchListTile(
-            title: const Text('Cliente temporário'),
-            value: clienteTemporario,
-            onChanged: (v) => setState(() => clienteTemporario = v),
-          ),
-          if (!clienteTemporario)
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Cliente'),
-              items: widget.clientes
-                  .map<DropdownMenuItem<String>>(
-                      (c) => DropdownMenuItem<String>(
-                            value: c['id_cliente'].toString(),
-                            child: Text(c['nome']),
-                          ))
-                  .toList(),
-              onChanged: (v) => clienteSelecionado = v,
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título
+            const Text(
+              'Nova Visita',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1f2937),
+              ),
             ),
-          if (clienteTemporario) ...[
-            TextField(
-              controller: nomeTempController,
-              decoration: const InputDecoration(labelText: 'Nome do cliente'),
+            const SizedBox(height: 24),
+
+            // Switch Cliente temporário
+            Row(
+              children: [
+                Switch(
+                  value: clienteTemporario,
+                  onChanged: (v) => setState(() => clienteTemporario = v),
+                  activeColor: const Color(0xFF6366f1),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Cliente temporário',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: telefoneTempController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Telefone'),
+            const SizedBox(height: 20),
+
+            // Campo Cliente ou Nome temporário
+            if (!clienteTemporario)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Cliente',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  items: widget.clientes
+                      .map<DropdownMenuItem<String>>(
+                          (c) => DropdownMenuItem<String>(
+                                value: c['id_cliente'].toString(),
+                                child: Text(c['nome']),
+                              ))
+                      .toList(),
+                  onChanged: (v) => setState(() => clienteSelecionado = v),
+                ),
+              ),
+
+            if (clienteTemporario) ...[
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: nomeTempController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome do cliente',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: telefoneTempController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Telefone',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Campo Observação
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextField(
+                controller: obsController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Observação',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Botões
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: salvando ? null : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFF6366f1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCELAR',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366f1),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: salvando ? null : _salvarVisita,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366f1),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: salvando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'SALVAR',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
           ],
-          TextField(
-            controller: obsController,
-            decoration: const InputDecoration(labelText: 'Observação'),
-          ),
-        ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            await api.post('/visitas', {
-              'data': widget.data,
-              'hora': widget.hora,
-              if (clienteTemporario)
-                'nome_cliente_temp': nomeTempController.text,
-              if (clienteTemporario)
-                'telefone_temp': telefoneTempController.text,
-              if (!clienteTemporario)
-                'id_cliente': clienteSelecionado,
-              'observacao': obsController.text,
-            });
-            widget.onSalvo();
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
     );
+  }
+
+  Future<void> _salvarVisita() async {
+    setState(() => salvando = true);
+
+    try {
+      final response = await api.post('/visitas', {
+        'data': widget.data,
+        'hora': widget.hora,
+        if (clienteTemporario) 'nome_cliente_temp': nomeTempController.text,
+        if (clienteTemporario) 'telefone_temp': telefoneTempController.text,
+        if (!clienteTemporario) 'id_cliente': clienteSelecionado,
+        'observacao': obsController.text,
+      });
+
+      debugPrint(
+          'Resposta do servidor: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 201) {
+        widget.onSalvo();
+      } else {
+        // Mostrar erro
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Erro ao salvar visita')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Erro ao salvar visita: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao salvar visita')),
+        );
+      }
+    } finally {
+      setState(() => salvando = false);
+    }
   }
 }
 
@@ -504,52 +865,157 @@ class ConfirmarVisitaDialog extends StatefulWidget {
 class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
   final ApiService api = ApiService();
   late TextEditingController obs;
-  late String info;
+  bool confirmando = false;
 
   @override
   void initState() {
     super.initState();
     obs = TextEditingController(text: widget.visita['observacao'] ?? '');
-    final cliente = widget.visita['nome_cliente'] ??
-        widget.visita['nome_cliente_temp'] ??
-        '';
-    final data = DateFormat('dd/MM/yyyy')
-        .format(DateTime.parse(widget.visita['data']));
-    info = '$cliente\n$data ${widget.visita['hora']}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Confirmar Visita'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(info),
-          const SizedBox(height: 8),
-          TextField(
-            controller: obs,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Observação'),
-          ),
-        ],
+    final cliente = widget.visita['nome_cliente'] ??
+        widget.visita['nome_cliente_temp'] ??
+        'Cliente';
+    final data =
+        DateFormat('dd/MM/yyyy').format(DateTime.parse(widget.visita['data']));
+    final info = '$cliente\n$data ${widget.visita['hora']}';
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título
+            const Text(
+              'Confirmar Visita',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1f2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Informações da visita
+            Text(
+              info,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Campo Observação
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextField(
+                controller: obs,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Observação',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Botões
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed:
+                        confirmando ? null : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFF6366f1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'CANCELAR',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6366f1),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: confirmando ? null : _confirmarVisita,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366f1),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: confirmando
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'CONFIRMAR',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () async {
-            final id = widget.visita['id'];
-            await api.put('/visitas/$id/observacao', {'observacao': obs.text});
-            await api.put('/visitas/$id/confirmar', {});
-            widget.onConfirmado();
-          },
-          child: const Text('Confirmar'),
-        ),
-      ],
+      ),
     );
+  }
+
+  Future<void> _confirmarVisita() async {
+    setState(() => confirmando = true);
+
+    try {
+      final id = widget.visita['id'];
+
+      // Atualizar observação
+      await api.put('/visitas/$id/observacao', {'observacao': obs.text});
+
+      // Confirmar visita
+      await api.put('/visitas/$id/confirmar', {});
+
+      widget.onConfirmado();
+    } catch (e) {
+      debugPrint('Erro ao confirmar visita: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao confirmar visita')),
+        );
+      }
+    } finally {
+      setState(() => confirmando = false);
+    }
   }
 }

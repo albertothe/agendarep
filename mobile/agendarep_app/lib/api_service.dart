@@ -39,16 +39,6 @@ class ApiService {
     await _storage.delete(key: 'saved_user');
   }
 
-  Future<http.Response> post(String path, Map<String, dynamic> data) async {
-    final baseUrl = await getBaseUrl();
-    final response = await http.post(
-      Uri.parse('$baseUrl$path'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(data),
-    );
-    return response;
-  }
-
   Future<http.Response> get(String path) async {
     final baseUrl = await getBaseUrl();
     final token = await getToken();
@@ -58,6 +48,21 @@ class ApiService {
     }
     final response =
         await http.get(Uri.parse('$baseUrl$path'), headers: headers);
+    return response;
+  }
+
+  Future<http.Response> post(String path, Map<String, dynamic> data) async {
+    final baseUrl = await getBaseUrl();
+    final token = await getToken();
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    final response = await http.post(
+      Uri.parse('$baseUrl$path'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
     return response;
   }
 

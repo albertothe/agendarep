@@ -1,4 +1,3 @@
-// Adaptado para layout moderno estilo login
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -94,6 +93,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
+        backgroundColor: Color(0xFFF5F6FA),
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -101,27 +101,36 @@ class _DashboardPageState extends State<DashboardPage> {
     final currency = NumberFormat.simpleCurrency(locale: 'pt_BR');
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F6FA),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Header padronizado
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('AgendaRep',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        color: Colors.indigo,
-                      )),
-                  const Spacer(),
+                  const Text(
+                    'AgendaRep',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366f1),
+                    ),
+                  ),
                   PopupMenuButton<String>(
-                    icon: const CircleAvatar(
+                    child: CircleAvatar(
                       radius: 18,
-                      backgroundColor: Colors.deepPurple,
-                      child: Text('V', style: TextStyle(color: Colors.white)),
+                      backgroundColor: const Color(0xFF6366f1),
+                      child: const Text(
+                        'V',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                     onSelected: (value) async {
                       if (value == 'logout') {
@@ -139,37 +148,68 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // Título e subtítulo padronizados
               const Text(
                 'Painel Geral',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1f2937),
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Visão geral de suas atividades,  clientes e potencial de vendas.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
+                'Visão geral das suas atividades, clientes e potencial de vendas.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6b7280),
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 24),
+
+              // Filtro de representantes
               if (perfil == 'coordenador' || perfil == 'diretor')
-                DropdownButtonFormField<String>(
-                  value: repSelecionado.isEmpty ? null : repSelecionado,
-                  decoration: const InputDecoration(
-                    labelText: 'Representante',
-                    border: OutlineInputBorder(),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  items: [
-                    const DropdownMenuItem(value: '', child: Text('Todos')),
-                    ...representantes.map((r) => DropdownMenuItem(
-                          value: r['codusuario'].toString(),
-                          child: Text(r['nome']),
-                        ))
-                  ],
-                  onChanged: (v) {
-                    setState(() => repSelecionado = v ?? '');
-                    _loadData();
-                  },
+                  child: DropdownButtonFormField<String>(
+                    value: repSelecionado.isEmpty ? null : repSelecionado,
+                    decoration: const InputDecoration(
+                      labelText: 'Representante',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Todos')),
+                      ...representantes.map((r) => DropdownMenuItem(
+                            value: r['codusuario'].toString(),
+                            child: Text(r['nome']),
+                          ))
+                    ],
+                    onChanged: (v) {
+                      setState(() => repSelecionado = v ?? '');
+                      _loadData();
+                    },
+                  ),
                 ),
-              const SizedBox(height: 20),
+
+              // Cards de métricas
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -178,22 +218,22 @@ class _DashboardPageState extends State<DashboardPage> {
                       icon: Icons.people,
                       value: qtdClientes.toString(),
                       label: 'Clientes Ativos',
-                      color: Colors.deepPurple),
+                      color: const Color(0xFF6366f1)),
                   _buildCard(
                       icon: Icons.monetization_on,
                       value: currency.format(potencialTotal),
                       label: 'Potencial Total',
-                      color: Colors.orange),
+                      color: const Color(0xFFf59e0b)),
                   _buildCard(
                       icon: Icons.calendar_today,
                       value: visitas.length.toString(),
                       label: 'Visitas na Semana',
-                      color: Colors.indigo),
+                      color: const Color(0xFF8b5cf6)),
                   _buildCard(
                       icon: Icons.show_chart,
                       value: currency.format(totalComprado),
                       label: 'Total Comprado',
-                      color: Colors.green),
+                      color: const Color(0xFF10b981)),
                 ],
               ),
               const SizedBox(height: 30),
@@ -218,28 +258,44 @@ class _DashboardPageState extends State<DashboardPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1f2937),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6b7280),
+              height: 1.2,
+            ),
           ),
         ],
       ),
@@ -264,8 +320,15 @@ class _DashboardPageState extends State<DashboardPage> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +338,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icon(
                   isConfirmado ? Icons.check_circle : Icons.schedule,
                   size: 18,
-                  color: isConfirmado ? Colors.green : Colors.orange,
+                  color: isConfirmado
+                      ? const Color(0xFF10b981)
+                      : const Color(0xFFf59e0b),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -298,13 +363,14 @@ class _DashboardPageState extends State<DashboardPage> {
             if (obs.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(obs, style: const TextStyle(color: Colors.black54)),
+                child:
+                    Text(obs, style: const TextStyle(color: Color(0xFF6b7280))),
               ),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
                 '$data às $hora',
-                style: const TextStyle(fontSize: 12, color: Colors.black45),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
               ),
             ),
           ],
