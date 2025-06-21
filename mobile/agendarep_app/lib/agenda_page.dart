@@ -26,13 +26,11 @@ class _AgendaPageState extends State<AgendaPage> {
   static List<String> _gerarHoras() {
     final inicio = DateTime(0, 1, 1, 8, 0);
     final fim = DateTime(0, 1, 1, 17, 0);
-    final minutos = fim.difference(inicio).inMinutes;
-    final passos = minutos ~/ 30 + 1; // inclui o horário final
-    return List.generate(passos, (i) {
-      final t = inicio.add(Duration(minutes: i * 30));
+    final horas = fim.difference(inicio).inHours + 1; // inclui o horário final
+    return List.generate(horas, (i) {
+      final t = inicio.add(Duration(hours: i));
       final h = t.hour.toString().padLeft(2, '0');
-      final m = t.minute.toString().padLeft(2, '0');
-      return '$h:$m';
+      return '$h:00';
     });
   }
 
@@ -80,9 +78,13 @@ class _AgendaPageState extends State<AgendaPage> {
         repSelecionado.isNotEmpty ? '&codusuario=$repSelecionado' : '';
     final res = await api.get('/visitas?inicio=$inicio&fim=$fim$repQuery');
     if (res.statusCode == 200) {
-      visitas = jsonDecode(res.body);
+      setState(() {
+        visitas = jsonDecode(res.body);
+      });
     } else {
-      visitas = [];
+      setState(() {
+        visitas = [];
+      });
     }
   }
 
@@ -92,9 +94,13 @@ class _AgendaPageState extends State<AgendaPage> {
     final res =
         await api.get('/visitas/clientes/representante$repQuery');
     if (res.statusCode == 200) {
-      clientes = jsonDecode(res.body);
+      setState(() {
+        clientes = jsonDecode(res.body);
+      });
     } else {
-      clientes = [];
+      setState(() {
+        clientes = [];
+      });
     }
   }
 
@@ -408,7 +414,10 @@ class NovaVisitaDialog extends StatefulWidget {
 class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
   final ApiService api = ApiService();
   final TextEditingController obsController = TextEditingController();
+  final TextEditingController nomeTempController = TextEditingController();
+  final TextEditingController telefoneTempController = TextEditingController();
   String? clienteSelecionado;
+  bool clienteTemporario = false;
 
   @override
   Widget build(BuildContext context) {
@@ -417,16 +426,34 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(labelText: 'Cliente'),
-            items: widget.clientes
-                .map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
-                      value: c['id_cliente'].toString(),
-                      child: Text(c['nome']),
-                    ))
-                .toList(),
-            onChanged: (v) => clienteSelecionado = v,
+          SwitchListTile(
+            title: const Text('Cliente temporário'),
+            value: clienteTemporario,
+            onChanged: (v) => setState(() => clienteTemporario = v),
           ),
+          if (!clienteTemporario)
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'Cliente'),
+              items: widget.clientes
+                  .map<DropdownMenuItem<String>>(
+                      (c) => DropdownMenuItem<String>(
+                            value: c['id_cliente'].toString(),
+                            child: Text(c['nome']),
+                          ))
+                  .toList(),
+              onChanged: (v) => clienteSelecionado = v,
+            ),
+          if (clienteTemporario) ...[
+            TextField(
+              controller: nomeTempController,
+              decoration: const InputDecoration(labelText: 'Nome do cliente'),
+            ),
+            TextField(
+              controller: telefoneTempController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Telefone'),
+            ),
+          ],
           TextField(
             controller: obsController,
             decoration: const InputDecoration(labelText: 'Observação'),
@@ -443,7 +470,12 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
             await api.post('/visitas', {
               'data': widget.data,
               'hora': widget.hora,
-              'id_cliente': clienteSelecionado,
+              if (clienteTemporario)
+                'nome_cliente_temp': nomeTempController.text,
+              if (clienteTemporario)
+                'telefone_temp': telefoneTempController.text,
+              if (!clienteTemporario)
+                'id_cliente': clienteSelecionado,
               'observacao': obsController.text,
             });
             widget.onSalvo();
@@ -472,21 +504,36 @@ class ConfirmarVisitaDialog extends StatefulWidget {
 class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
   final ApiService api = ApiService();
   late TextEditingController obs;
+  late String info;
 
   @override
   void initState() {
     super.initState();
     obs = TextEditingController(text: widget.visita['observacao'] ?? '');
+    final cliente = widget.visita['nome_cliente'] ??
+        widget.visita['nome_cliente_temp'] ??
+        '';
+    final data = DateFormat('dd/MM/yyyy')
+        .format(DateTime.parse(widget.visita['data']));
+    info = '$cliente\n$data ${widget.visita['hora']}';
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Confirmar Visita'),
-      content: TextField(
-        controller: obs,
-        maxLines: 3,
-        decoration: const InputDecoration(labelText: 'Observação'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(info),
+          const SizedBox(height: 8),
+          TextField(
+            controller: obs,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Observação'),
+          ),
+        ],
       ),
       actions: [
         TextButton(
