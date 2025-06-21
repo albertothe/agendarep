@@ -123,47 +123,85 @@ class _AgendaPageState extends State<AgendaPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('AgendaRep')),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _carregarDados,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _carregarDados,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: _semanaAnterior,
-                        icon: const Icon(Icons.chevron_left),
-                      ),
-                      Text(
-                        _tituloSemana(),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      IconButton(
-                        onPressed: _proximaSemana,
-                        icon: const Icon(Icons.chevron_right),
+                  const Text('AgendaRep',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.indigo,
+                      )),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    icon: const CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.deepPurple,
+                      child: Text('V', style: TextStyle(color: Colors.white)),
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'logout') {
+                        await api.setToken('');
+                        if (!mounted) return;
+                        Navigator.pushReplacementNamed(context, '/');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Text('Sair'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Table(
-                      defaultColumnWidth: const IntrinsicColumnWidth(),
-                      border: TableBorder.all(color: Colors.grey.shade300),
-                      children: [
-                        _buildHeaderRow(),
-                        ...horas.map(_buildLinhaHora),
-                      ],
-                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: _semanaAnterior,
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  Text(
+                    _tituloSemana(),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  IconButton(
+                    onPressed: _proximaSemana,
+                    icon: const Icon(Icons.chevron_right),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Table(
+                  defaultColumnWidth: const IntrinsicColumnWidth(),
+                  border: TableBorder.all(color: Colors.grey.shade300),
+                  children: [
+                    _buildHeaderRow(),
+                    ...horas.map(_buildLinhaHora),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

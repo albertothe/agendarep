@@ -245,52 +245,91 @@ class _ClientesPageState extends State<ClientesPage> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _loadClientes(reset: true),
-      child: ListView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(
-              labelText: 'Buscar cliente',
-              prefixIcon: Icon(Icons.search),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 16),
-          ..._filteredClientes.map((c) => Card(
-                child: ListTile(
-                  title: Text(c['nome']),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (c['telefone'] != null)
-                        Text(c['telefone'],
-                            style: const TextStyle(fontSize: 12)),
-                      Text(
-                          'Potencial: ${_formatCurrency(c['totalPotencial'])}'),
-                      Text('Comprado: ${_formatCurrency(c['totalComprado'])}'),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _loadClientes(reset: true),
+          child: ListView(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
+                children: [
+                  const Text('AgendaRep',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.indigo,
+                      )),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    icon: const CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.deepPurple,
+                      child: Text('V', style: TextStyle(color: Colors.white)),
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'logout') {
+                        await api.setToken('');
+                        if (!mounted) return;
+                        Navigator.pushReplacementNamed(context, '/');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Text('Sair'),
+                      ),
                     ],
                   ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('${c['progresso']}%'),
-                    ],
-                  ),
-                  onTap: () => _openDetalhes(c),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Buscar cliente',
+                  prefixIcon: Icon(Icons.search),
                 ),
-              )),
-          if (loadingMore) ...[
-            const SizedBox(height: 16),
-            const Center(child: CircularProgressIndicator()),
-          ]
-        ],
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              ..._filteredClientes.map((c) => Card(
+                    child: ListTile(
+                      title: Text(c['nome']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (c['telefone'] != null)
+                            Text(c['telefone'],
+                                style: const TextStyle(fontSize: 12)),
+                          Text(
+                              'Potencial: ${_formatCurrency(c['totalPotencial'])}'),
+                          Text('Comprado: ${_formatCurrency(c['totalComprado'])}'),
+                        ],
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('${c['progresso']}%'),
+                        ],
+                      ),
+                      onTap: () => _openDetalhes(c),
+                    ),
+                  )),
+              if (loadingMore) ...[
+                const SizedBox(height: 16),
+                const Center(child: CircularProgressIndicator()),
+              ]
+            ],
+          ),
+        ),
       ),
     );
   }
