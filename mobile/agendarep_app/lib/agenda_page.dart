@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 import 'api_service.dart';
 
 class AgendaPage extends StatefulWidget {
@@ -15,6 +16,9 @@ class _AgendaPageState extends State<AgendaPage> {
   DateTime semanaAtual = _inicioDaSemana(DateTime.now());
   List<dynamic> visitas = [];
   List<dynamic> clientes = [];
+  List<dynamic> representantes = [];
+  String repSelecionado = '';
+  String perfil = '';
   bool loading = true;
 
   final List<String> horas = _gerarHoras();
@@ -45,8 +49,25 @@ class _AgendaPageState extends State<AgendaPage> {
   List<DateTime> get diasSemana =>
       List.generate(7, (i) => semanaAtual.add(Duration(days: i)));
 
+  Future<void> _loadRepresentantes() async {
+    final res = await api.get('/usuarios/representantes');
+    if (res.statusCode == 200) {
+      representantes = jsonDecode(res.body);
+    }
+  }
+
   Future<void> _carregarDados() async {
     setState(() => loading = true);
+    final token = await api.getToken();
+    if (token != null) {
+      final data = Jwt.parseJwt(token);
+      perfil = data['perfil'] ?? '';
+      if ((perfil == 'coordenador' || perfil == 'diretor') &&
+          representantes.isEmpty) {
+        await _loadRepresentantes();
+      }
+    }
+
     await Future.wait([_carregarVisitas(), _carregarClientes()]);
     setState(() => loading = false);
   }
@@ -55,7 +76,9 @@ class _AgendaPageState extends State<AgendaPage> {
     final df = DateFormat('yyyy-MM-dd');
     final inicio = df.format(semanaAtual);
     final fim = df.format(semanaAtual.add(const Duration(days: 6)));
-    final res = await api.get('/visitas?inicio=$inicio&fim=$fim');
+    final repQuery =
+        repSelecionado.isNotEmpty ? '&codusuario=$repSelecionado' : '';
+    final res = await api.get('/visitas?inicio=$inicio&fim=$fim$repQuery');
     if (res.statusCode == 200) {
       visitas = jsonDecode(res.body);
     } else {
@@ -64,7 +87,10 @@ class _AgendaPageState extends State<AgendaPage> {
   }
 
   Future<void> _carregarClientes() async {
-    final res = await api.get('/visitas/clientes/representante');
+    final repQuery =
+        repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
+    final res =
+        await api.get('/visitas/clientes/representante$repQuery');
     if (res.statusCode == 200) {
       clientes = jsonDecode(res.body);
     } else {
@@ -169,6 +195,27 @@ class _AgendaPageState extends State<AgendaPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (perfil == 'coordenador' || perfil == 'diretor')
+                DropdownButtonFormField<String>(
+                  value: repSelecionado.isEmpty ? null : repSelecionado,
+                  decoration: const InputDecoration(
+                    labelText: 'Representante',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Todos')),
+                    ...representantes.map((r) => DropdownMenuItem(
+                          value: r['codusuario'].toString(),
+                          child: Text(r['nome']),
+                        ))
+                  ],
+                  onChanged: (v) {
+                    setState(() => repSelecionado = v ?? '');
+                    _carregarDados();
+                  },
+                ),
+              if (perfil == 'coordenador' || perfil == 'diretor')
+                const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -198,6 +245,11 @@ class _AgendaPageState extends State<AgendaPage> {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              const Text('Visitas Marcadas',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ..._buildListaVisitas(),
             ],
           ),
         ),
@@ -283,6 +335,37 @@ class _AgendaPageState extends State<AgendaPage> {
                 child: Icon(Icons.add, size: 16, color: Colors.grey)),
       ),
     );
+  }
+
+  List<Widget> _buildListaVisitas() {
+    final sorted = List<Map<String, dynamic>>.from(visitas)
+      ..sort((a, b) =>
+          DateTime.parse(a['data']).compareTo(DateTime.parse(b['data'])));
+    final df = DateFormat('dd/MM/yyyy');
+
+    return sorted.map((v) {
+      final cliente = v['nome_cliente'] ?? v['nome_cliente_temp'] ?? '';
+      final data = df.format(DateTime.parse(v['data']));
+      final hora = v['hora'];
+      final obs = v['observacao'] ?? '';
+      final isConfirmado = v['confirmado'] == true;
+
+      return ListTile(
+        leading: Icon(
+          isConfirmado ? Icons.check_circle : Icons.schedule,
+          color: isConfirmado ? Colors.green : Colors.orange,
+        ),
+        title: Text('$cliente - $hora'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(data),
+            if (obs.isNotEmpty) Text(obs),
+          ],
+        ),
+        onTap: () => _abrirConfirmar(v),
+      );
+    }).toList();
   }
 }
 

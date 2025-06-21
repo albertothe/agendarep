@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
+import 'package:jwt_decode/jwt_decode.dart';
 import 'api_service.dart';
 
 class ClientesPage extends StatefulWidget {
@@ -24,12 +25,15 @@ class _ClientesPageState extends State<ClientesPage> {
   bool hasMore = true;
   int page = 1;
   final int limit = 50;
+  List<dynamic> representantes = [];
+  String repSelecionado = '';
+  String perfil = '';
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadClientes(reset: true);
+    _loadData();
   }
 
   @override
@@ -37,6 +41,26 @@ class _ClientesPageState extends State<ClientesPage> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadRepresentantes() async {
+    final res = await api.get('/usuarios/representantes');
+    if (res.statusCode == 200) {
+      representantes = jsonDecode(res.body);
+    }
+  }
+
+  Future<void> _loadData() async {
+    final token = await api.getToken();
+    if (token != null) {
+      final data = Jwt.parseJwt(token);
+      perfil = data['perfil'] ?? '';
+      if ((perfil == 'coordenador' || perfil == 'diretor') &&
+          representantes.isEmpty) {
+        await _loadRepresentantes();
+      }
+    }
+    await _loadClientes(reset: true);
   }
 
   Future<void> _loadClientes({bool reset = false}) async {
@@ -56,7 +80,10 @@ class _ClientesPageState extends State<ClientesPage> {
     }
 
     try {
-      final res = await api.get('/clientes');
+      final query = repSelecionado.isNotEmpty
+          ? '?codusuario=$repSelecionado'
+          : '';
+      final res = await api.get('/clientes$query');
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
 
@@ -291,6 +318,27 @@ class _ClientesPageState extends State<ClientesPage> {
                 ],
               ),
               const SizedBox(height: 16),
+              if (perfil == 'coordenador' || perfil == 'diretor')
+                DropdownButtonFormField<String>(
+                  value: repSelecionado.isEmpty ? null : repSelecionado,
+                  decoration: const InputDecoration(
+                    labelText: 'Representante',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('Todos')),
+                    ...representantes.map((r) => DropdownMenuItem(
+                          value: r['codusuario'].toString(),
+                          child: Text(r['nome']),
+                        ))
+                  ],
+                  onChanged: (v) {
+                    setState(() => repSelecionado = v ?? '');
+                    _loadClientes(reset: true);
+                  },
+                ),
+              if (perfil == 'coordenador' || perfil == 'diretor')
+                const SizedBox(height: 16),
               TextField(
                 controller: _searchController,
                 decoration: const InputDecoration(
