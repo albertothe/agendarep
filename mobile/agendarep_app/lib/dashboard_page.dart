@@ -1,3 +1,4 @@
+// Adaptado para layout moderno estilo login
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -38,7 +39,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _loadData() async {
     setState(() => loading = true);
-
     try {
       final token = await api.getToken();
       if (token != null) {
@@ -81,56 +81,77 @@ class _DashboardPageState extends State<DashboardPage> {
   int get visitasPendentes =>
       visitas.where((v) => v['confirmado'] != true).length;
   double get potencialTotal => clientes.fold(
-        0,
-        (sum, c) =>
-            sum + (double.tryParse(c['potencial_compra'].toString()) ?? 0.0),
-      );
-
+      0,
+      (sum, c) =>
+          sum + (double.tryParse(c['potencial_compra'].toString()) ?? 0.0));
   double get totalComprado => clientes.fold(
-        0,
-        (sum, c) =>
-            sum + (double.tryParse(c['valor_comprado'].toString()) ?? 0.0),
-      );
+      0,
+      (sum, c) =>
+          sum + (double.tryParse(c['valor_comprado'].toString()) ?? 0.0));
   int get qtdClientes => clientes.map((c) => c['id_cliente']).toSet().length;
 
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            const Text(
-              'Painel Geral',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1f2937),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Visão geral das suas atividades, clientes\ne potencial de vendas.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6b7280),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 32),
+    final currency = NumberFormat.simpleCurrency(locale: 'pt_BR');
 
-            // Filtro de representantes
-            if (perfil == 'coordenador' || perfil == 'diretor')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: DropdownButtonFormField<String>(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadData,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
+                children: [
+                  const Text('AgendaRep',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.indigo,
+                      )),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    icon: const CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.deepPurple,
+                      child: Text('V', style: TextStyle(color: Colors.white)),
+                    ),
+                    onSelected: (value) async {
+                      if (value == 'logout') {
+                        await api.setToken('');
+                        if (!mounted) return;
+                        Navigator.pushReplacementNamed(context, '/');
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'logout',
+                        child: Text('Sair'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Painel Geral',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Visão geral de suas atividades,  clientes e potencial de vendas.',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 24),
+              if (perfil == 'coordenador' || perfil == 'diretor')
+                DropdownButtonFormField<String>(
                   value: repSelecionado.isEmpty ? null : repSelecionado,
                   decoration: const InputDecoration(
                     labelText: 'Representante',
@@ -148,147 +169,77 @@ class _DashboardPageState extends State<DashboardPage> {
                     _loadData();
                   },
                 ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildCard(
+                      icon: Icons.people,
+                      value: qtdClientes.toString(),
+                      label: 'Clientes Ativos',
+                      color: Colors.deepPurple),
+                  _buildCard(
+                      icon: Icons.monetization_on,
+                      value: currency.format(potencialTotal),
+                      label: 'Potencial Total',
+                      color: Colors.orange),
+                  _buildCard(
+                      icon: Icons.calendar_today,
+                      value: visitas.length.toString(),
+                      label: 'Visitas na Semana',
+                      color: Colors.indigo),
+                  _buildCard(
+                      icon: Icons.show_chart,
+                      value: currency.format(totalComprado),
+                      label: 'Total Comprado',
+                      color: Colors.green),
+                ],
               ),
-
-            // Cards principais
-            _buildMetricCard(
-              icon: Icons.people,
-              iconColor: const Color(0xFF6366f1),
-              value: qtdClientes.toString(),
-              label: 'Clientes Ativos',
-            ),
-            const SizedBox(height: 20),
-
-            _buildMetricCard(
-              icon: Icons.attach_money,
-              iconColor: const Color(0xFFf59e0b),
-              value: NumberFormat.simpleCurrency(locale: 'pt_BR')
-                  .format(totalComprado),
-              label: '',
-            ),
-            const SizedBox(height: 20),
-
-            _buildMetricCard(
-              icon: Icons.calendar_today,
-              iconColor: const Color(0xFF6366f1),
-              value: NumberFormat.simpleCurrency(locale: 'pt_BR')
-                  .format(potencialTotal),
-              label: '',
-            ),
-            const SizedBox(height: 20),
-
-            _buildMetricCard(
-              icon: Icons.check_circle,
-              iconColor: const Color(0xFF10b981),
-              value: visitasConfirmadas.toString(),
-              label: 'Visitas Confirmadas',
-            ),
-            const SizedBox(height: 32),
-
-            // Status das Visitas
-            const Text(
-              'Status das Visitas',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1f2937),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10b981),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$visitasConfirmadas Confirmadas',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1f2937),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 32),
-                Text(
-                  '$visitasPendentes Pendentes',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF1f2937),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Lista de atividades recentes
-            ..._buildRecentActivities(),
-          ],
+              const SizedBox(height: 30),
+              const Text('Atividades Recentes',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              ..._buildRecentActivities(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMetricCard({
-    required IconData icon,
-    required Color iconColor,
-    required String value,
-    required String label,
-  }) {
+  Widget _buildCard(
+      {required IconData icon,
+      required String value,
+      required String label,
+      required Color color}) {
     return Container(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 24,
-            ),
+      width: MediaQuery.of(context).size.width / 2 - 24,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1f2937),
-                  ),
-                ),
-                if (label.isNotEmpty)
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF6b7280),
-                    ),
-                  ),
-              ],
-            ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.black54),
           ),
         ],
       ),
@@ -297,11 +248,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   List<Widget> _buildRecentActivities() {
     final sorted = List<Map<String, dynamic>>.from(visitas)
-      ..sort((a, b) {
-        final dateA = DateTime.parse(a['data']);
-        final dateB = DateTime.parse(b['data']);
-        return dateB.compareTo(dateA);
-      });
+      ..sort((a, b) =>
+          DateTime.parse(b['data']).compareTo(DateTime.parse(a['data'])));
     final recent = sorted.take(10);
     final df = DateFormat('dd/MM/yyyy');
 
@@ -312,43 +260,31 @@ class _DashboardPageState extends State<DashboardPage> {
       final obs = v['observacao'] ?? '';
       final isConfirmado = v['confirmado'] == true;
 
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Row(
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isConfirmado
-                    ? const Color(0xFF10b981)
-                    : const Color(0xFFf59e0b),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isConfirmado ? Icons.check : Icons.schedule,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1f2937),
-                      ),
+            Row(
+              children: [
+                Icon(
+                  isConfirmado ? Icons.check_circle : Icons.schedule,
+                  size: 18,
+                  color: isConfirmado ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: isConfirmado
+                          ? 'Visita confirmada com '
+                          : 'Visita agendada com ',
                       children: [
-                        TextSpan(
-                          text: isConfirmado
-                              ? 'Visita confirmada com '
-                              : 'Visita agendada com ',
-                        ),
                         TextSpan(
                           text: cliente,
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -356,28 +292,19 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                   ),
-                  if (obs.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        obs,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6b7280),
-                        ),
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '${data}às $hora',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6b7280),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            if (obs.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(obs, style: const TextStyle(color: Colors.black54)),
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '$data às $hora',
+                style: const TextStyle(fontSize: 12, color: Colors.black45),
               ),
             ),
           ],
