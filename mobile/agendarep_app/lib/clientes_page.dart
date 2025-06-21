@@ -192,7 +192,7 @@ class _ClientesPageState extends State<ClientesPage> {
         return DraggableScrollableSheet(
           expand: false,
           builder: (context, scrollController) {
-            return SingleChildScrollView(
+            return ListView(
               controller: scrollController,
               padding: EdgeInsets.only(
                 left: 16,
@@ -200,44 +200,41 @@ class _ClientesPageState extends State<ClientesPage> {
                 top: 16,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 16,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    cliente['nome'],
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ...grupos.map((g) {
-                    final pot = g['potencial_compra'] as double;
-                    final comp = g['valor_comprado'] as double;
-                    return Slidable(
-                      key: ValueKey(g['id_grupo']),
-                      endActionPane: ActionPane(
-                        motion: const DrawerMotion(),
-                        extentRatio: 0.25,
-                        children: [
-                          SlidableAction(
-                            onPressed: (_) =>
-                                _editarPotencial(cliente, g as Map<String, dynamic>),
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            icon: Icons.edit,
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        title: Text(g['nome_grupo'] ?? ''),
-                        subtitle: Text(
-                          'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}',
+              children: [
+                Text(
+                  cliente['nome'],
+                  style:
+                      const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ...grupos.map((g) {
+                  final pot = g['potencial_compra'] as double;
+                  final comp = g['valor_comprado'] as double;
+                  return Slidable(
+                    key: ValueKey(g['id_grupo']),
+                    endActionPane: ActionPane(
+                      motion: const DrawerMotion(),
+                      extentRatio: 0.25,
+                      children: [
+                        SlidableAction(
+                          onPressed: (_) =>
+                              _editarPotencial(cliente, g as Map<String, dynamic>),
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          icon: Icons.edit,
                         ),
+                      ],
+                    ),
+                    child: ListTile(
+                      title: Text(g['nome_grupo'] ?? ''),
+                      subtitle: Text(
+                        'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}',
                       ),
-                    );
-                  }).toList(),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 16),
+              ],
             );
           },
         );
