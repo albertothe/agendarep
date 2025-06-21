@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'api_service.dart';
 
@@ -131,6 +132,57 @@ class _ClientesPageState extends State<ClientesPage> {
         .toList();
   }
 
+  void _editarPotencial(
+      Map<String, dynamic> cliente, Map<String, dynamic> grupo) {
+    final controller = TextEditingController(
+        text: (grupo['potencial_compra'] ?? '').toString());
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Editar Potencial'),
+        content: TextField(
+          controller: controller,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration:
+              const InputDecoration(labelText: 'Potencial de compra'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final valor = double.tryParse(
+                      controller.text.replaceAll(',', '.')) ??
+                  grupo['potencial_compra'];
+              await api.put(
+                  '/clientes/${cliente['id_cliente']}/grupos/${grupo['id_grupo']}',
+                  {'potencial_compra': valor});
+
+              setState(() {
+                final diff = valor - (grupo['potencial_compra'] as double);
+                grupo['potencial_compra'] = valor;
+                cliente['totalPotencial'] =
+                    (cliente['totalPotencial'] as double) + diff;
+                final totalPotencial = cliente['totalPotencial'] as double;
+                final totalComprado = cliente['totalComprado'] as double;
+                cliente['progresso'] = totalPotencial > 0
+                    ? ((totalComprado / totalPotencial) * 100).round()
+                    : 0;
+              });
+
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openDetalhes(Map<String, dynamic> cliente) {
     showModalBottomSheet(
       context: context,
@@ -160,10 +212,26 @@ class _ClientesPageState extends State<ClientesPage> {
                   ...grupos.map((g) {
                     final pot = g['potencial_compra'] as double;
                     final comp = g['valor_comprado'] as double;
-                    return ListTile(
-                      title: Text(g['nome_grupo'] ?? ''),
-                      subtitle: Text(
-                        'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}',
+                    return Slidable(
+                      key: ValueKey(g['id_grupo']),
+                      endActionPane: ActionPane(
+                        motion: const DrawerMotion(),
+                        extentRatio: 0.25,
+                        children: [
+                          SlidableAction(
+                            onPressed: (_) =>
+                                _editarPotencial(cliente, g as Map<String, dynamic>),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            icon: Icons.edit,
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        title: Text(g['nome_grupo'] ?? ''),
+                        subtitle: Text(
+                          'Potencial: ${_formatCurrency(pot)}\nComprado: ${_formatCurrency(comp)}',
+                        ),
                       ),
                     );
                   }).toList(),
