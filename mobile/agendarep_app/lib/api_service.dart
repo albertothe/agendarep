@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const String _defaultBaseUrl = 'http://179.51.199.78:18501';
+  //static const String _defaultBaseUrl = 'http://179.51.199.78:18501';
+  static const String _defaultBaseUrl = 'http://10.5.59.85:8501';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<String> getBaseUrl() async {
