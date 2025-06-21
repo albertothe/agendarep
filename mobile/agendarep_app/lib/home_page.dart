@@ -3,7 +3,6 @@ import 'agenda_page.dart';
 import 'dashboard_page.dart';
 import 'clientes_page.dart';
 import 'sugestoes_page.dart';
-import 'settings_page.dart';
 import 'api_service.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,18 +22,6 @@ class _HomePageState extends State<HomePage> {
     ClientesPage(),
     SugestoesPage(),
   ];
-
-  void _logout() async {
-    await api.setToken('');
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/');
-  }
-
-  void _openSettings() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsPage()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

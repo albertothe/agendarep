@@ -87,13 +87,18 @@ class _AgendaPageState extends State<AgendaPage> {
       final df = DateFormat('yyyy-MM-dd');
       final inicio = df.format(semanaAtual);
       final fim = df.format(semanaAtual.add(const Duration(days: 6)));
-      final repQuery =
-          repSelecionado.isNotEmpty ? '&codusuario=$repSelecionado' : '';
 
-      final url = '/visitas?inicio=$inicio&fim=$fim$repQuery';
-      debugPrint('🔄 Carregando visitas: $inicio até $fim');
+      // Ajustar URL para corresponder ao frontend web
+      String url = '/visitas?inicio=$inicio&fim=$fim';
+      if (repSelecionado.isNotEmpty) {
+        url += '&representante=$repSelecionado';
+      }
+
+      debugPrint('🔄 Carregando visitas: $url');
 
       final res = await api.get(url);
+      debugPrint('📡 Status: ${res.statusCode}');
+      debugPrint('📦 Response: ${res.body}');
 
       if (res.statusCode == 200) {
         final visitasData = jsonDecode(res.body) as List;
@@ -101,25 +106,29 @@ class _AgendaPageState extends State<AgendaPage> {
           visitas = visitasData;
         });
         debugPrint('✅ ${visitas.length} visitas carregadas');
+
+        // Debug cada visita
+        for (var v in visitas) {
+          debugPrint(
+              '📋 Visita: ${v['data']} ${v['hora']} - ${v['nome_cliente'] ?? v['nome_cliente_temp']}');
+        }
       } else {
-        debugPrint('❌ Erro HTTP: ${res.statusCode}');
-        setState(() {
-          visitas = [];
-        });
+        setState(() => visitas = []);
       }
     } catch (e) {
-      debugPrint('❌ Erro ao carregar visitas: $e');
-      setState(() {
-        visitas = [];
-      });
+      debugPrint('❌ Erro: $e');
+      setState(() => visitas = []);
     }
   }
 
   Future<void> _carregarClientes() async {
     try {
-      final repQuery =
-          repSelecionado.isNotEmpty ? '?codusuario=$repSelecionado' : '';
-      final res = await api.get('/visitas/clientes/representante$repQuery');
+      String url = '/visitas/clientes/representante';
+      if (repSelecionado.isNotEmpty) {
+        url += '?representante=$repSelecionado';
+      }
+
+      final res = await api.get(url);
 
       if (res.statusCode == 200) {
         setState(() {
@@ -132,9 +141,7 @@ class _AgendaPageState extends State<AgendaPage> {
       }
     } catch (e) {
       debugPrint('Erro ao carregar clientes: $e');
-      setState(() {
-        clientes = [];
-      });
+      setState(() => clientes = []);
     }
   }
 
@@ -480,40 +487,36 @@ class _AgendaPageState extends State<AgendaPage> {
       final visitaData = v['data']?.toString() ?? '';
       final visitaHora = v['hora']?.toString() ?? '';
 
-      // Normalizar hora para comparação (pegar apenas HH:mm)
-      String horaVisita = visitaHora;
-      if (visitaHora.contains(':')) {
-        final parts = visitaHora.split(':');
-        if (parts.length >= 2) {
-          horaVisita =
-              '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
-        }
-      }
+      // Comparação simples e direta
+      bool matchData = visitaData == dataStr;
+      bool matchHora = visitaHora.startsWith(hora);
 
-      final match = visitaData == dataStr && horaVisita == hora;
-
-      // Debug apenas quando encontrar visita
-      if (match) {
-        debugPrint(
-            '✅ Visita encontrada: $dataStr $hora - ${v['nome_cliente'] ?? v['nome_cliente_temp']}');
-      }
-
-      return match;
+      return matchData && matchHora;
     }).toList();
 
     final visita = visitasHorario.isNotEmpty ? visitasHorario.first : null;
+
+    if (visita != null) {
+      debugPrint(
+          '✅ Visita encontrada: $dataStr $hora - ${visita['nome_cliente'] ?? visita['nome_cliente_temp']}');
+    }
 
     Color backgroundColor = Colors.white;
     Color borderColor = Colors.grey.shade300;
 
     if (visita != null) {
+      debugPrint('🎨 Aplicando cores para visita encontrada');
       if (visita['confirmado'] == true) {
         backgroundColor = const Color(0xFFDCFCE7); // Verde claro
         borderColor = const Color(0xFF16A34A); // Verde
+        debugPrint('🟢 Cor: Verde (confirmada)');
       } else {
         backgroundColor = const Color(0xFFDEF7FF); // Azul claro
         borderColor = const Color(0xFF0EA5E9); // Azul
+        debugPrint('🔵 Cor: Azul (pendente)');
       }
+    } else {
+      debugPrint('⚪ Célula vazia - cor branca');
     }
 
     return DataCell(
