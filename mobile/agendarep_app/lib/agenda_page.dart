@@ -17,18 +17,20 @@ class _AgendaPageState extends State<AgendaPage> {
   List<dynamic> clientes = [];
   bool loading = true;
 
-  final horas = [
-    '08:00',
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00'
-  ];
+  final List<String> horas = _gerarHoras();
+
+  static List<String> _gerarHoras() {
+    final inicio = DateTime(0, 1, 1, 8, 0);
+    final fim = DateTime(0, 1, 1, 17, 0);
+    final minutos = fim.difference(inicio).inMinutes;
+    final passos = minutos ~/ 30 + 1; // inclui o horário final
+    return List.generate(passos, (i) {
+      final t = inicio.add(Duration(minutes: i * 30));
+      final h = t.hour.toString().padLeft(2, '0');
+      final m = t.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    });
+  }
 
   @override
   void initState() {
