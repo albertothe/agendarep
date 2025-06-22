@@ -264,7 +264,7 @@ class _AgendaPageState extends State<AgendaPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Título e subtítulo padronizados
                 const Text(
@@ -284,12 +284,12 @@ class _AgendaPageState extends State<AgendaPage> {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Filtro de representantes
                 if (perfil == 'coordenador' || perfil == 'diretor')
                   Container(
-                    margin: const EdgeInsets.only(bottom: 24),
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -370,7 +370,7 @@ class _AgendaPageState extends State<AgendaPage> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Grid da agenda com coluna de horas fixa
                 Container(
@@ -771,7 +771,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
         child: SingleChildScrollView(
           // Adicionado scroll
           child: Padding(
-            padding: const EdgeInsets.all(24), // Reduzido de 28 para 24
+            padding: const EdgeInsets.all(16), // Reduzido de 28 para 24
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,19 +780,19 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                 Row(
                   children: [
                     Container(
-                      width: 50,
-                      height: 50,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: const Color(0xFF6366f1).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.event_note,
                         color: Color(0xFF6366f1),
-                        size: 28,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,7 +800,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                           const Text(
                             'Nova Visita',
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1f2937),
                             ),
@@ -808,7 +808,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                           Text(
                             '$dataFormatada às ${widget.hora}',
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 11,
                               color: Color(0xFF6b7280),
                             ),
                           ),
@@ -817,31 +817,35 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
 
                 // Switch Cliente temporário
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12), // Reduzido de 16 para 12
                   decoration: BoxDecoration(
                     color: const Color(0xFF6366f1).withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: const Color(0xFF6366f1).withOpacity(0.2),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Switch(
-                        value: clienteTemporario,
-                        onChanged: (v) => setState(() => clienteTemporario = v),
-                        activeColor: const Color(0xFF6366f1),
+                      Transform.scale(
+                        scale: 0.8, // Reduz o tamanho do switch
+                        child: Switch(
+                          value: clienteTemporario,
+                          onChanged: (v) =>
+                              setState(() => clienteTemporario = v),
+                          activeColor: const Color(0xFF6366f1),
+                        ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
                           'Cliente temporário',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF374151),
                           ),
@@ -850,7 +854,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Campo Cliente ou Nome temporário
                 if (!clienteTemporario)
@@ -870,12 +874,13 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(
                         labelText: 'Selecionar Cliente',
+                        labelStyle: TextStyle(fontSize: 14),
                         prefixIcon:
                             Icon(Icons.person, color: Color(0xFF6366f1)),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                       ),
                       items: widget.clientes
@@ -907,12 +912,13 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                       controller: nomeTempController,
                       decoration: const InputDecoration(
                         labelText: 'Nome do cliente',
+                        labelStyle: TextStyle(fontSize: 14),
                         prefixIcon:
                             Icon(Icons.person, color: Color(0xFF6366f1)),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                       ),
                     ),
@@ -936,18 +942,19 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
                         labelText: 'Telefone',
+                        labelStyle: TextStyle(fontSize: 14),
                         prefixIcon: Icon(Icons.phone, color: Color(0xFF6366f1)),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
+                          horizontal: 12,
+                          vertical: 12,
                         ),
                       ),
                     ),
                   ),
                 ],
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Campo Observação
                 Container(
@@ -965,9 +972,10 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                   ),
                   child: TextField(
                     controller: obsController,
-                    maxLines: 4,
+                    maxLines: 2,
                     decoration: const InputDecoration(
                       labelText: 'Observação',
+                      labelStyle: TextStyle(fontSize: 14),
                       prefixIcon: Padding(
                         padding: EdgeInsets.only(bottom: 60),
                         child: Icon(Icons.note_add, color: Color(0xFF6366f1)),
@@ -978,7 +986,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
 
                 // Botões
                 Row(
@@ -988,7 +996,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                         onPressed:
                             salvando ? null : () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           side: const BorderSide(
                               color: Color(0xFF6366f1), width: 2),
                           shape: RoundedRectangleBorder(
@@ -1005,13 +1013,13 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: salvando ? null : _salvarVisita,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6366f1),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1144,7 +1152,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
         child: SingleChildScrollView(
           // Adicionado scroll
           child: Padding(
-            padding: const EdgeInsets.all(24), // Reduzido de 28 para 24
+            padding: const EdgeInsets.all(20), // Reduzido de 28 para 24
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1153,8 +1161,8 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                 Row(
                   children: [
                     Container(
-                      width: 50,
-                      height: 50,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: const Color(0xFF16A34A).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(15),
@@ -1162,15 +1170,15 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                       child: const Icon(
                         Icons.check_circle_outline,
                         color: Color(0xFF16A34A),
-                        size: 28,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
                         'Confirmar Visita',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1f2937),
                         ),
@@ -1178,11 +1186,11 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Informações da visita
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFF16A34A).withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
@@ -1205,7 +1213,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                             child: Text(
                               cliente,
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1f2937),
                               ),
@@ -1225,7 +1233,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                           Text(
                             '$data às $hora',
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Color(0xFF6b7280),
                             ),
                           ),
@@ -1234,7 +1242,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Campo Observação
                 Container(
@@ -1252,7 +1260,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                   ),
                   child: TextField(
                     controller: obs,
-                    maxLines: 4,
+                    maxLines: 3,
                     decoration: const InputDecoration(
                       labelText: 'Observação da visita',
                       prefixIcon: Padding(
@@ -1265,7 +1273,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
                 // Botões
                 Row(
@@ -1275,7 +1283,7 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                         onPressed:
                             confirmando ? null : () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           side: const BorderSide(
                               color: Color(0xFF6b7280), width: 2),
                           shape: RoundedRectangleBorder(
@@ -1292,13 +1300,13 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: confirmando ? null : _confirmarVisita,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16A34A),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

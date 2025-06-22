@@ -1107,10 +1107,10 @@ class _ClientesPageState extends State<ClientesPage> {
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(16),
                           title: Text(
-                            '${cliente['id_cliente']} ${cliente['nome']}',
+                            '${cliente['nome']} - ${cliente['id_cliente']}',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Color(0xFF1f2937),
                             ),
                           ),
@@ -1121,14 +1121,14 @@ class _ClientesPageState extends State<ClientesPage> {
                               Text(
                                 'Potencial: ${_formatCurrencyShort(cliente['totalPotencial'])}',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: Color(0xFF6b7280),
                                 ),
                               ),
                               Text(
                                 'Comprado: ${_formatCurrencyShort(cliente['totalComprado'])}',
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: Color(0xFF6b7280),
                                 ),
                               ),
@@ -1196,24 +1196,24 @@ class _ClientesPageState extends State<ClientesPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 32, // era 40
+              height: 32, // era 40
               decoration: BoxDecoration(
                 color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8), // era 10
               ),
               child: Icon(
                 icon,
                 color: iconColor,
-                size: 20,
+                size: 16, // era 20
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8), // era 12
             Flexible(
               child: Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 15, // era 16
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1f2937),
                 ),
@@ -1222,7 +1222,7 @@ class _ClientesPageState extends State<ClientesPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2), // era 4
             Flexible(
               child: Text(
                 label,
