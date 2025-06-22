@@ -28,6 +28,7 @@ class _ClientesPageState extends State<ClientesPage> {
   List<dynamic> representantes = [];
   String repSelecionado = '';
   String perfil = '';
+  String nomeUsuario = '';
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _ClientesPageState extends State<ClientesPage> {
     if (token != null) {
       final data = Jwt.parseJwt(token);
       perfil = data['perfil'] ?? '';
+      nomeUsuario = data['nome'] ?? 'Usuario';
       if ((perfil == 'coordenador' || perfil == 'diretor') &&
           representantes.isEmpty) {
         await _loadRepresentantes();
@@ -262,20 +264,24 @@ class _ClientesPageState extends State<ClientesPage> {
                                     child: Column(
                                       children: [
                                         Text(
-                                          _formatCurrency(
+                                          _formatCurrencyShort(
                                               cliente['totalPotencial']),
                                           style: const TextStyle(
-                                            fontSize: 18,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFF3b82f6),
                                           ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         const Text(
                                           'Potencial Total',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 11,
                                             color: Color(0xFF6b7280),
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ],
                                     ),
@@ -289,20 +295,24 @@ class _ClientesPageState extends State<ClientesPage> {
                                     child: Column(
                                       children: [
                                         Text(
-                                          _formatCurrency(
+                                          _formatCurrencyShort(
                                               cliente['totalComprado']),
                                           style: const TextStyle(
-                                            fontSize: 18,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFF10b981),
                                           ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         const Text(
                                           'Total Comprado',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 11,
                                             color: Color(0xFF6b7280),
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ],
                                     ),
@@ -318,17 +328,19 @@ class _ClientesPageState extends State<ClientesPage> {
                                         Text(
                                           '${cliente['progresso']}%',
                                           style: const TextStyle(
-                                            fontSize: 18,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                             color: Color(0xFFf59e0b),
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                         const Text(
                                           'Progresso',
                                           style: TextStyle(
-                                            fontSize: 12,
+                                            fontSize: 11,
                                             color: Color(0xFF6b7280),
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ],
                                     ),
@@ -482,13 +494,16 @@ class _ClientesPageState extends State<ClientesPage> {
                                                     ),
                                                   ),
                                                   Text(
-                                                    _formatCurrency(pot),
+                                                    _formatCurrencyShort(pot),
                                                     style: const TextStyle(
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       color: Color(0xFF3b82f6),
                                                     ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ],
                                               ),
@@ -506,13 +521,16 @@ class _ClientesPageState extends State<ClientesPage> {
                                                     ),
                                                   ),
                                                   Text(
-                                                    _formatCurrency(comp),
+                                                    _formatCurrencyShort(comp),
                                                     style: const TextStyle(
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       color: Color(0xFF10b981),
                                                     ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ],
                                               ),
@@ -922,11 +940,14 @@ class _ClientesPageState extends State<ClientesPage> {
                     child: CircleAvatar(
                       radius: 18,
                       backgroundColor: const Color(0xFF6366f1),
-                      child: const Text(
-                        'V',
-                        style: TextStyle(
+                      child: Text(
+                        nomeUsuario.isNotEmpty
+                            ? nomeUsuario[0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -1036,34 +1057,33 @@ class _ClientesPageState extends State<ClientesPage> {
                   ),
                 ),
 
-              // Cards de métricas
-              Row(
+              // Cards de métricas com altura fixa
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio:
+                    0.9, // Proporção fixa para manter tamanho uniforme
                 children: [
-                  Expanded(
-                    child: _buildMetricCard(
-                      icon: Icons.people,
-                      iconColor: const Color(0xFF6366f1),
-                      value: totais['totalClientes'].toString(),
-                      label: 'Total de\nClientes',
-                    ),
+                  _buildMetricCard(
+                    icon: Icons.people,
+                    iconColor: const Color(0xFF6366f1),
+                    value: totais['totalClientes'].toString(),
+                    label: 'Total de\nClientes',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMetricCard(
-                      icon: Icons.attach_money,
-                      iconColor: const Color(0xFFf59e0b),
-                      value: _formatCurrencyShort(totais['totalPotencial']),
-                      label: 'Potencial\nTotal',
-                    ),
+                  _buildMetricCard(
+                    icon: Icons.attach_money,
+                    iconColor: const Color(0xFFf59e0b),
+                    value: _formatCurrencyShort(totais['totalPotencial']),
+                    label: 'Potencial\nTotal',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMetricCard(
-                      icon: Icons.trending_up,
-                      iconColor: const Color(0xFF10b981),
-                      value: _formatCurrencyShort(totais['totalComprado']),
-                      label: 'Total\nComprado',
-                    ),
+                  _buildMetricCard(
+                    icon: Icons.trending_up,
+                    iconColor: const Color(0xFF10b981),
+                    value: _formatCurrencyShort(totais['totalComprado']),
+                    label: 'Total\nComprado',
                   ),
                 ],
               ),
@@ -1099,14 +1119,14 @@ class _ClientesPageState extends State<ClientesPage> {
                             children: [
                               const SizedBox(height: 8),
                               Text(
-                                'Potencial: ${_formatCurrency(cliente['totalPotencial'])}',
+                                'Potencial: ${_formatCurrencyShort(cliente['totalPotencial'])}',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF6b7280),
                                 ),
                               ),
                               Text(
-                                'Comprado: ${_formatCurrency(cliente['totalComprado'])}',
+                                'Comprado: ${_formatCurrencyShort(cliente['totalComprado'])}',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   color: Color(0xFF6b7280),
@@ -1159,7 +1179,6 @@ class _ClientesPageState extends State<ClientesPage> {
     required String label,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1171,41 +1190,54 @@ class _ClientesPageState extends State<ClientesPage> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 20,
+            const SizedBox(height: 12),
+            Flexible(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1f2937),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1f2937),
+            const SizedBox(height: 4),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF6b7280),
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6b7280),
-              height: 1.2,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

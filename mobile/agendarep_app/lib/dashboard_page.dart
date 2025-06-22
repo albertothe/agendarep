@@ -21,6 +21,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<dynamic> representantes = [];
   String repSelecionado = '';
   String perfil = '';
+  String nomeUsuario = '';
   bool loading = true;
 
   @override
@@ -43,6 +44,7 @@ class _DashboardPageState extends State<DashboardPage> {
       if (token != null) {
         final data = Jwt.parseJwt(token);
         perfil = data['perfil'] ?? '';
+        nomeUsuario = data['nome'] ?? 'Usuario';
         if ((perfil == 'coordenador' || perfil == 'diretor') &&
             representantes.isEmpty) {
           await _loadRepresentantes();
@@ -124,11 +126,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: CircleAvatar(
                       radius: 18,
                       backgroundColor: const Color(0xFF6366f1),
-                      child: const Text(
-                        'V',
-                        style: TextStyle(
+                      child: Text(
+                        nomeUsuario.isNotEmpty
+                            ? nomeUsuario[0].toUpperCase()
+                            : 'U',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -209,10 +214,15 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ),
 
-              // Cards de métricas
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              // Cards de métricas com altura fixa
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio:
+                    1.1, // Proporção fixa para manter tamanho uniforme
                 children: [
                   _buildCard(
                       icon: Icons.people,
@@ -221,7 +231,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       color: const Color(0xFF6366f1)),
                   _buildCard(
                       icon: Icons.monetization_on,
-                      value: currency.format(potencialTotal),
+                      value: _formatCurrencyShort(potencialTotal),
                       label: 'Potencial Total',
                       color: const Color(0xFFf59e0b)),
                   _buildCard(
@@ -231,7 +241,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       color: const Color(0xFF8b5cf6)),
                   _buildCard(
                       icon: Icons.show_chart,
-                      value: currency.format(totalComprado),
+                      value: _formatCurrencyShort(totalComprado),
                       label: 'Total Comprado',
                       color: const Color(0xFF10b981)),
                 ],
@@ -254,8 +264,6 @@ class _DashboardPageState extends State<DashboardPage> {
       required String label,
       required Color color}) {
     return Container(
-      width: MediaQuery.of(context).size.width / 2 - 24,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: Colors.white,
@@ -267,39 +275,63 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1f2937),
+            const SizedBox(height: 12),
+            Flexible(
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1f2937),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6b7280),
-              height: 1.2,
+            const SizedBox(height: 4),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF6b7280),
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  // Função para formatar valores grandes de forma compacta
+  String _formatCurrencyShort(double value) {
+    if (value >= 1000000) {
+      return 'R\$ ${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return 'R\$ ${(value / 1000).toStringAsFixed(0)}K';
+    } else {
+      return 'R\$ ${value.toStringAsFixed(0)}';
+    }
   }
 
   List<Widget> _buildRecentActivities() {
