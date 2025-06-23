@@ -23,8 +23,7 @@ import {
     TableRow,
 } from "@mui/material"
 import { Add, Check, CalendarMonth } from "@mui/icons-material"
-
-const API = import.meta.env.VITE_API_URL
+import { API_URL } from "../services/api"
 
 const horas = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
 
@@ -71,7 +70,7 @@ const Agenda = () => {
         const fim = diasSemana[6].format("YYYY-MM-DD")
         const params: any = { inicio, fim }
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API}/visitas`, {
+        const res = await axios.get(`${API_URL}/visitas`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -81,7 +80,7 @@ const Agenda = () => {
     const buscarClientes = async () => {
         const params: any = {}
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API}/visitas/clientes/representante`, {
+        const res = await axios.get(`${API_URL}/visitas/clientes/representante`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -89,7 +88,7 @@ const Agenda = () => {
     }
 
     const carregarRepresentantes = async () => {
-        const res = await axios.get(`${API}/usuarios/representantes`, {
+        const res = await axios.get(`${API_URL}/usuarios/representantes`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
@@ -121,18 +120,25 @@ const Agenda = () => {
                 delete dadosVisita.codusuario
             }
 
-            console.log("=== DEBUG SALVAR VISITA ===")
-            console.log("Perfil do usuário:", perfil)
-            console.log("Representante selecionado no modal:", novaVisita.codusuario)
-            console.log("Dados finais sendo enviados:", dadosVisita)
-            console.log("Campo codusuario no payload:", dadosVisita.codusuario)
+            console.log("=== DEBUG SALVAR VISITA FRONTEND ===")
+            console.log("🌐 API URL:", API_URL)
+            console.log("📋 Perfil do usuário:", perfil)
+            console.log("👥 Representante selecionado no modal:", novaVisita.codusuario)
+            console.log("📦 Dados finais sendo enviados:", JSON.stringify(dadosVisita, null, 2))
+            console.log("🔍 Campo codusuario no payload:", dadosVisita.codusuario)
+            console.log("🔍 Tipo do codusuario:", typeof dadosVisita.codusuario)
+            console.log("🔍 Token presente:", !!token)
             console.log("========================")
 
-            const response = await axios.post(`${API}/visitas`, dadosVisita, {
-                headers: { Authorization: `Bearer ${token}` },
+            const response = await axios.post(`${API_URL}/visitas`, dadosVisita, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
             })
 
-            console.log("Resposta do backend:", response.data)
+            console.log("✅ Resposta do backend:", response.data)
+            console.log("✅ Status da resposta:", response.status)
 
             setModalAberto(false)
             setNovaVisita({})
@@ -140,11 +146,16 @@ const Agenda = () => {
             setClienteSelecionado(null)
             buscarVisitas()
 
-            console.log("Visita criada com sucesso!")
+            console.log("✅ Visita criada com sucesso!")
         } catch (error: any) {
-            console.error("Erro ao criar visita:", error)
+            console.error("❌ Erro ao criar visita:", error)
             if (error?.response) {
-                console.error("Dados do erro:", error.response.data)
+                console.error("❌ Status do erro:", error.response.status)
+                console.error("❌ Dados do erro:", error.response.data)
+                console.error("❌ Headers do erro:", error.response.headers)
+            }
+            if (error?.request) {
+                console.error("❌ Request que falhou:", error.request)
             }
         }
     }
@@ -157,14 +168,14 @@ const Agenda = () => {
     const confirmarVisita = async () => {
         if (!visitaParaConfirmar) return
         await axios.put(
-            `${API}/visitas/${visitaParaConfirmar.id}/observacao`,
+            `${API_URL}/visitas/${visitaParaConfirmar.id}/observacao`,
             { observacao: observacaoEditada },
             {
                 headers: { Authorization: `Bearer ${token}` },
             },
         )
         await axios.put(
-            `${API}/visitas/${visitaParaConfirmar.id}/confirmar`,
+            `${API_URL}/visitas/${visitaParaConfirmar.id}/confirmar`,
             {},
             {
                 headers: { Authorization: `Bearer ${token}` },
@@ -210,16 +221,16 @@ const Agenda = () => {
 
     const buscarClientesRepresentante = async (codusuario: string) => {
         try {
-            console.log("Buscando clientes para representante:", codusuario)
+            console.log("🔄 Buscando clientes para representante:", codusuario)
             const params = { codusuario }
-            const res = await axios.get(`${API}/visitas/clientes/representante`, {
+            const res = await axios.get(`${API_URL}/visitas/clientes/representante`, {
                 params,
                 headers: { Authorization: `Bearer ${token}` },
             })
-            console.log("Clientes encontrados:", res.data)
+            console.log("✅ Clientes encontrados:", res.data)
             setClientes(res.data)
         } catch (error) {
-            console.error("Erro ao buscar clientes do representante:", error)
+            console.error("❌ Erro ao buscar clientes do representante:", error)
             setClientes([])
         }
     }
@@ -479,6 +490,7 @@ const Agenda = () => {
                             value={novaVisita.codusuario || ""}
                             onChange={(e) => {
                                 const codusuario = e.target.value
+                                console.log("🔄 Representante selecionado no frontend:", codusuario)
                                 setNovaVisita({ ...novaVisita, codusuario })
 
                                 // Buscar clientes do representante selecionado

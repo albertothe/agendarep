@@ -57,24 +57,47 @@ router.post("/", autenticar, async (req: Request, res: Response) => {
     const { codusuario: codusuarioToken, perfil } = (req as any).user || {}
 
     console.log("=== DEBUG POST /visitas ===")
-    console.log("📥 Body recebido:", req.body)
+    console.log("🌐 Headers:", req.headers)
+    console.log("📥 Body completo:", JSON.stringify(req.body, null, 2))
     console.log("👤 Usuário do token:", { codusuario: codusuarioToken, perfil })
     console.log("🎯 codusuario do body:", codusuarioBody)
+    console.log("🔍 Tipo do codusuario body:", typeof codusuarioBody)
+    console.log("🔍 codusuario body é null/undefined?", codusuarioBody == null)
+    console.log("🔍 codusuario body é string vazia?", codusuarioBody === "")
 
-    // Determinar qual codusuario usar:
-    // - Se coordenador/diretor enviou codusuario no body, usar esse
-    // - Senão, usar o do token (representante)
+    // Validação mais rigorosa do codusuario do body
+    const codusuarioBodyValido =
+        codusuarioBody && codusuarioBody !== "" && codusuarioBody !== "null" && codusuarioBody !== "undefined"
+
+    console.log("🔍 codusuario body é válido?", codusuarioBodyValido)
+
+    // Determinar qual codusuario usar com validação mais rigorosa
     let codusuarioFinal = codusuarioToken
 
-    if ((perfil === "coordenador" || perfil === "diretor") && codusuarioBody) {
+    if ((perfil === "coordenador" || perfil === "diretor") && codusuarioBodyValido) {
         codusuarioFinal = codusuarioBody
         console.log("✅ Usando codusuario do representante selecionado:", codusuarioFinal)
     } else {
         console.log("✅ Usando codusuario do token (representante logado):", codusuarioFinal)
+
+        // Log adicional para debug
+        if (perfil === "coordenador" || perfil === "diretor") {
+            console.log("⚠️ ATENÇÃO: Coordenador/Diretor mas codusuario do body inválido!")
+            console.log("⚠️ Perfil:", perfil)
+            console.log("⚠️ codusuario body original:", codusuarioBody)
+            console.log("⚠️ codusuario body válido:", codusuarioBodyValido)
+        }
     }
 
     console.log("🔧 codusuario final que será salvo:", codusuarioFinal)
+    console.log("🔧 Tipo do codusuario final:", typeof codusuarioFinal)
     console.log("========================")
+
+    // Validação adicional antes de salvar
+    if (!codusuarioFinal) {
+        console.error("❌ ERRO: codusuario final está vazio!")
+        return res.status(400).json({ erro: "Código do usuário não pode estar vazio" })
+    }
 
     try {
         const result = await pool.query(
@@ -83,7 +106,12 @@ router.post("/", autenticar, async (req: Request, res: Response) => {
             [data, hora, id_cliente || null, nome_cliente_temp || null, telefone_temp || null, observacao, codusuarioFinal],
         )
 
-        console.log("✅ Visita criada:", result.rows[0])
+        console.log("✅ Visita criada com sucesso:")
+        console.log("📋 ID:", result.rows[0].id)
+        console.log("📋 Data/Hora:", result.rows[0].data, result.rows[0].hora)
+        console.log("📋 Codusuario salvo:", result.rows[0].codusuario)
+        console.log("📋 Cliente:", result.rows[0].nome_cliente_temp || result.rows[0].id_cliente)
+
         res.status(201).json(result.rows[0])
     } catch (err) {
         console.error("❌ Erro ao cadastrar visita:", err)
