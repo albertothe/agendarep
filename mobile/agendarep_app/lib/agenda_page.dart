@@ -20,6 +20,7 @@ class _AgendaPageState extends State<AgendaPage> {
   String repSelecionado = '';
   String perfil = '';
   String nomeUsuario = '';
+  String codusuario = '';
   bool loading = true;
 
   final List<String> horas = _gerarHoras();
@@ -76,6 +77,8 @@ class _AgendaPageState extends State<AgendaPage> {
         final data = Jwt.parseJwt(token);
         perfil = data['perfil'] ?? '';
         nomeUsuario = data['nome'] ?? 'Usuario';
+        codusuario = data['codusuario']?.toString() ?? '';
+
         if ((perfil == 'coordenador' || perfil == 'diretor') &&
             representantes.isEmpty) {
           await _loadRepresentantes();
@@ -174,6 +177,9 @@ class _AgendaPageState extends State<AgendaPage> {
         data: data,
         hora: hora,
         clientes: clientes,
+        representantes: representantes,
+        perfil: perfil,
+        codusuarioLogado: codusuario,
         onSalvo: () {
           Navigator.of(context).pop();
           _carregarDados();
@@ -183,6 +189,17 @@ class _AgendaPageState extends State<AgendaPage> {
   }
 
   void _abrirConfirmar(Map visita) {
+    // Apenas representantes podem confirmar agendamentos
+    if (perfil != 'representante') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Apenas representantes podem confirmar agendamentos'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (_) => ConfirmarVisitaDialog(
@@ -276,9 +293,11 @@ class _AgendaPageState extends State<AgendaPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Gerencie suas visitas a clientes para a semana. Clique em um horário para agendar uma nova visita.',
-                  style: TextStyle(
+                Text(
+                  perfil == 'representante'
+                      ? 'Gerencie suas visitas a clientes para a semana. Clique em um horário para agendar uma nova visita.'
+                      : 'Visualize e gerencie agendamentos dos representantes. Apenas representantes podem confirmar visitas.',
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Color(0xFF6b7280),
                     height: 1.4,
@@ -315,11 +334,44 @@ class _AgendaPageState extends State<AgendaPage> {
                         const DropdownMenuItem(value: '', child: Text('Todos')),
                         ...representantes.map((r) => DropdownMenuItem(
                               value: r['codusuario'].toString(),
-                              child: Text(r['nome']),
+                              child: Row(
+                                mainAxisSize:
+                                    MainAxisSize.min, // Adicionar esta linha
+                                children: [
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: const Color(0xFF6366f1)
+                                        .withOpacity(0.1),
+                                    child: Text(
+                                      r['nome']
+                                          .toString()
+                                          .substring(0, 1)
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF6366f1),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    // Mudar de Expanded para Flexible
+                                    child: Text(
+                                      r['nome'],
+                                      style: const TextStyle(fontSize: 14),
+                                      overflow: TextOverflow
+                                          .ellipsis, // Adicionar overflow
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ))
                       ],
                       onChanged: (v) {
-                        setState(() => repSelecionado = v ?? '');
+                        setState(() {
+                          repSelecionado = v ?? '';
+                        });
                         _carregarDados();
                       },
                     ),
@@ -578,7 +630,7 @@ class _AgendaPageState extends State<AgendaPage> {
     return GestureDetector(
       onTap: () {
         if (visita != null) {
-          // Só permite editar se não estiver confirmado
+          // Só permite editar se não estiver confirmado e for representante
           if (!isConfirmado) {
             _abrirConfirmar(visita);
           }
@@ -604,7 +656,7 @@ class _AgendaPageState extends State<AgendaPage> {
         ),
         child: Container(
           margin: const EdgeInsets.all(2),
-          padding: const EdgeInsets.all(4), // Reduzido de 6 para 4
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(8),
@@ -635,7 +687,7 @@ class _AgendaPageState extends State<AgendaPage> {
                                   visita['nome_cliente_temp'] ??
                                   'Cliente') as String,
                               style: TextStyle(
-                                fontSize: 10, // Reduzido de 11 para 10
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 color: isConfirmado
                                     ? const Color(
@@ -649,20 +701,24 @@ class _AgendaPageState extends State<AgendaPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 2), // Espaçamento reduzido
+                          const SizedBox(height: 2),
 
                           // Ícone de confirmação
                           if (isConfirmado)
                             const Icon(
                               Icons.check_circle,
                               color: Color(0xFF0EA5E9),
-                              size: 14, // Reduzido de 16 para 14
+                              size: 14,
                             )
                           else
-                            const Icon(
-                              Icons.check_circle_outline,
-                              color: Color(0xFF16A34A),
-                              size: 14, // Reduzido de 16 para 14
+                            Icon(
+                              perfil == 'representante'
+                                  ? Icons.check_circle_outline
+                                  : Icons.visibility,
+                              color: perfil == 'representante'
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFF6b7280),
+                              size: 14,
                             ),
                         ],
                       ),
@@ -672,14 +728,14 @@ class _AgendaPageState extends State<AgendaPage> {
                     if (temMultiplas &&
                         (perfil == 'coordenador' || perfil == 'diretor'))
                       Positioned(
-                        top: 1, // Reduzido de 2 para 1
-                        right: 1, // Reduzido de 2 para 1
+                        top: 1,
+                        right: 1,
                         child: Container(
-                          width: 18, // Reduzido de 20 para 18
-                          height: 18, // Reduzido de 20 para 18
+                          width: 18,
+                          height: 18,
                           decoration: BoxDecoration(
                             color: const Color(0xFF6366f1),
-                            borderRadius: BorderRadius.circular(9), // Ajustado
+                            borderRadius: BorderRadius.circular(9),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.2),
@@ -693,7 +749,7 @@ class _AgendaPageState extends State<AgendaPage> {
                               '+${visitasHorario.length - 1}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 9, // Reduzido de 10 para 9
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -705,7 +761,7 @@ class _AgendaPageState extends State<AgendaPage> {
               : const Center(
                   child: Icon(
                     Icons.add,
-                    size: 18, // Reduzido de 20 para 18
+                    size: 18,
                     color: Color(0xFF9ca3af),
                   ),
                 ),
@@ -719,6 +775,9 @@ class NovaVisitaDialog extends StatefulWidget {
   final String data;
   final String hora;
   final List<dynamic> clientes;
+  final List<dynamic> representantes;
+  final String perfil;
+  final String codusuarioLogado;
   final VoidCallback onSalvo;
 
   const NovaVisitaDialog({
@@ -726,6 +785,9 @@ class NovaVisitaDialog extends StatefulWidget {
     required this.data,
     required this.hora,
     required this.clientes,
+    required this.representantes,
+    required this.perfil,
+    required this.codusuarioLogado,
     required this.onSalvo,
   });
 
@@ -738,9 +800,97 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
   final TextEditingController obsController = TextEditingController();
   final TextEditingController nomeTempController = TextEditingController();
   final TextEditingController telefoneTempController = TextEditingController();
+  final TextEditingController buscaClienteController = TextEditingController();
+  List<dynamic> clientesFiltrados = [];
+  bool mostrandoBusca = false;
   String? clienteSelecionado;
+  String? representanteSelecionado;
   bool clienteTemporario = false;
   bool salvando = false;
+  bool carregandoClientes = false;
+
+  @override
+  void initState() {
+    super.initState();
+    clientesFiltrados = widget.clientes;
+
+    // Se for representante, seleciona automaticamente ele mesmo
+    if (widget.perfil == 'representante') {
+      representanteSelecionado = widget.codusuarioLogado;
+    }
+
+    // Listener para busca de clientes
+    buscaClienteController.addListener(_filtrarClientes);
+  }
+
+  void _filtrarClientes() {
+    final busca = buscaClienteController.text.toLowerCase();
+    setState(() {
+      if (busca.isEmpty) {
+        clientesFiltrados = widget.clientes;
+      } else {
+        clientesFiltrados = widget.clientes.where((cliente) {
+          final nome = cliente['nome'].toString().toLowerCase();
+          return nome.contains(busca);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    buscaClienteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _buscarClientesRepresentante(String codusuario) async {
+    setState(() {
+      carregandoClientes = true;
+    });
+
+    try {
+      debugPrint('🔄 Buscando clientes do representante: $codusuario');
+
+      final res = await api
+          .get('/visitas/clientes/representante?codusuario=$codusuario');
+
+      debugPrint('📡 Status busca clientes: ${res.statusCode}');
+      debugPrint('📦 Response clientes: ${res.body}');
+
+      if (res.statusCode == 200) {
+        final clientesData = jsonDecode(res.body) as List;
+        setState(() {
+          clientesFiltrados = clientesData;
+          clienteSelecionado = null;
+          buscaClienteController.clear();
+          mostrandoBusca = false;
+          carregandoClientes = false;
+        });
+        debugPrint(
+            '✅ ${clientesData.length} clientes carregados para representante $codusuario');
+
+        for (var cliente in clientesData) {
+          debugPrint(
+              '👤 Cliente: ${cliente['nome']} (ID: ${cliente['id_cliente']})');
+        }
+      } else {
+        setState(() {
+          clientesFiltrados = [];
+          clienteSelecionado = null;
+          carregandoClientes = false;
+        });
+        debugPrint(
+            '❌ Erro ao buscar clientes: ${res.statusCode} - ${res.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Erro ao buscar clientes do representante: $e');
+      setState(() {
+        clientesFiltrados = [];
+        clienteSelecionado = null;
+        carregandoClientes = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -754,8 +904,8 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
       elevation: 10,
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8, // Limita altura
-          maxWidth: MediaQuery.of(context).size.width * 0.9, // Limita largura
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -769,9 +919,8 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
           ),
         ),
         child: SingleChildScrollView(
-          // Adicionado scroll
           child: Padding(
-            padding: const EdgeInsets.all(16), // Reduzido de 28 para 24
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -819,9 +968,115 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                 ),
                 const SizedBox(height: 16),
 
+                // Seleção de representante (apenas para coordenador/diretor)
+                if (widget.perfil == 'coordenador' ||
+                    widget.perfil == 'diretor') ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (representanteSelecionado == null ||
+                                representanteSelecionado!.isEmpty)
+                            ? Colors.red.shade300
+                            : Colors.grey.shade300,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: representanteSelecionado,
+                      decoration: InputDecoration(
+                        labelText: 'Representante *',
+                        labelStyle: TextStyle(
+                          fontSize: 14,
+                          color: (representanteSelecionado == null ||
+                                  representanteSelecionado!.isEmpty)
+                              ? Colors.red.shade600
+                              : const Color(0xFF6b7280),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.person_pin,
+                          color: (representanteSelecionado == null ||
+                                  representanteSelecionado!.isEmpty)
+                              ? Colors.red.shade600
+                              : const Color(0xFF6366f1),
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                      items: widget.representantes
+                          .map<DropdownMenuItem<String>>((r) =>
+                              DropdownMenuItem<String>(
+                                value: r['codusuario'].toString(),
+                                child: Row(
+                                  mainAxisSize:
+                                      MainAxisSize.min, // Adicionar esta linha
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: const Color(0xFF6366f1)
+                                          .withOpacity(0.1),
+                                      child: Text(
+                                        r['nome']
+                                            .toString()
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF6366f1),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      // Mudar de Expanded para Flexible
+                                      child: Text(
+                                        r['nome'],
+                                        style: const TextStyle(fontSize: 14),
+                                        overflow: TextOverflow
+                                            .ellipsis, // Adicionar overflow
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        setState(() {
+                          representanteSelecionado = v;
+                        });
+                        debugPrint('🔄 Representante selecionado: $v');
+
+                        // Buscar clientes do representante selecionado
+                        if (v != null && v.isNotEmpty) {
+                          _buscarClientesRepresentante(v);
+                        } else {
+                          setState(() {
+                            clientesFiltrados = widget.clientes;
+                            clienteSelecionado = null;
+                            buscaClienteController.clear();
+                            mostrandoBusca = false;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Switch Cliente temporário
                 Container(
-                  padding: const EdgeInsets.all(12), // Reduzido de 16 para 12
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF6366f1).withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
@@ -832,7 +1087,7 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                   child: Row(
                     children: [
                       Transform.scale(
-                        scale: 0.8, // Reduz o tamanho do switch
+                        scale: 0.8,
                         child: Switch(
                           value: clienteTemporario,
                           onChanged: (v) =>
@@ -857,7 +1112,8 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                 const SizedBox(height: 16),
 
                 // Campo Cliente ou Nome temporário
-                if (!clienteTemporario)
+                if (!clienteTemporario) ...[
+                  // Campo de busca de cliente
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -871,28 +1127,171 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
                         ),
                       ],
                     ),
-                    child: DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Selecionar Cliente',
-                        labelStyle: TextStyle(fontSize: 14),
-                        prefixIcon:
-                            Icon(Icons.person, color: Color(0xFF6366f1)),
+                    child: TextField(
+                      controller: buscaClienteController,
+                      enabled:
+                          !carregandoClientes, // Desabilitar durante carregamento
+                      decoration: InputDecoration(
+                        labelText: carregandoClientes
+                            ? 'Carregando clientes...'
+                            : 'Buscar cliente',
+                        labelStyle: const TextStyle(fontSize: 14),
+                        prefixIcon: carregandoClientes
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : const Icon(Icons.search,
+                                color: Color(0xFF6366f1)),
+                        suffixIcon: buscaClienteController.text.isNotEmpty &&
+                                !carregandoClientes
+                            ? IconButton(
+                                icon: const Icon(Icons.clear,
+                                    color: Color(0xFF6b7280)),
+                                onPressed: () {
+                                  buscaClienteController.clear();
+                                  setState(() {
+                                    clienteSelecionado = null;
+                                    mostrandoBusca = false;
+                                  });
+                                },
+                              )
+                            : null,
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
                       ),
-                      items: widget.clientes
-                          .map<DropdownMenuItem<String>>(
-                              (c) => DropdownMenuItem<String>(
-                                    value: c['id_cliente'].toString(),
-                                    child: Text(c['nome']),
-                                  ))
-                          .toList(),
-                      onChanged: (v) => setState(() => clienteSelecionado = v),
+                      onTap: () {
+                        if (!carregandoClientes) {
+                          setState(() {
+                            mostrandoBusca = true;
+                          });
+                        }
+                      },
                     ),
                   ),
+
+                  const SizedBox(height: 8),
+
+                  // Lista de clientes filtrados
+                  if (mostrandoBusca && clientesFiltrados.isNotEmpty)
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: clientesFiltrados.length,
+                        itemBuilder: (context, index) {
+                          final cliente = clientesFiltrados[index];
+                          final isSelected = clienteSelecionado ==
+                              cliente['id_cliente'].toString();
+
+                          return ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: isSelected
+                                  ? const Color(0xFF6366f1)
+                                  : const Color(0xFF6366f1).withOpacity(0.1),
+                              child: Icon(
+                                Icons.person,
+                                size: 16,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF6366f1),
+                              ),
+                            ),
+                            title: Text(
+                              cliente['nome'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? const Color(0xFF6366f1)
+                                    : const Color(0xFF1f2937),
+                              ),
+                            ),
+                            subtitle: cliente['telefone'] != null
+                                ? Text(
+                                    cliente['telefone'],
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF6b7280),
+                                    ),
+                                  )
+                                : null,
+                            trailing: isSelected
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Color(0xFF6366f1),
+                                    size: 20,
+                                  )
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                clienteSelecionado =
+                                    cliente['id_cliente'].toString();
+                                buscaClienteController.text = cliente['nome'];
+                                mostrandoBusca = false;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+
+                  // Mensagem quando não encontrar clientes
+                  if (mostrandoBusca &&
+                      clientesFiltrados.isEmpty &&
+                      buscaClienteController.text.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            color: Colors.grey.shade400,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Nenhum cliente encontrado para "${buscaClienteController.text}"',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
 
                 if (clienteTemporario) ...[
                   Container(
@@ -1055,35 +1454,110 @@ class _NovaVisitaDialogState extends State<NovaVisitaDialog> {
   }
 
   Future<void> _salvarVisita() async {
+    // Validação para coordenador/diretor
+    if ((widget.perfil == 'coordenador' || widget.perfil == 'diretor') &&
+        (representanteSelecionado == null ||
+            representanteSelecionado!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um representante para o agendamento'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Validação de cliente
+    if (!clienteTemporario &&
+        (clienteSelecionado == null || clienteSelecionado!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um cliente'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (clienteTemporario && nomeTempController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Digite o nome do cliente'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => salvando = true);
 
     try {
-      final response = await api.post('/visitas', {
+      // Determinar qual código de usuário usar - LÓGICA CORRIGIDA
+      String codusuarioParaEnviar;
+
+      if (widget.perfil == 'coordenador' || widget.perfil == 'diretor') {
+        // Para coordenador/diretor, SEMPRE usar o representante selecionado
+        if (representanteSelecionado == null ||
+            representanteSelecionado!.isEmpty) {
+          throw Exception('Representante não selecionado');
+        }
+        codusuarioParaEnviar = representanteSelecionado!;
+      } else {
+        // Para representante, usar o próprio código
+        codusuarioParaEnviar = widget.codusuarioLogado;
+      }
+
+      debugPrint('🔄 Salvando visita:');
+      debugPrint('📋 Perfil: ${widget.perfil}');
+      debugPrint('👤 Código usuário logado: ${widget.codusuarioLogado}');
+      debugPrint('👥 Representante selecionado: $representanteSelecionado');
+      debugPrint('📤 Código para enviar: $codusuarioParaEnviar');
+
+      final dadosVisita = {
         'data': widget.data,
         'hora': widget.hora,
-        if (clienteTemporario) 'nome_cliente_temp': nomeTempController.text,
-        if (clienteTemporario) 'telefone_temp': telefoneTempController.text,
+        'codusuario': codusuarioParaEnviar, // SEMPRE enviar o código correto
+        if (clienteTemporario)
+          'nome_cliente_temp': nomeTempController.text.trim(),
+        if (clienteTemporario)
+          'telefone_temp': telefoneTempController.text.trim(),
         if (!clienteTemporario) 'id_cliente': clienteSelecionado,
-        'observacao': obsController.text,
-      });
+        'observacao': obsController.text.trim(),
+      };
+
+      debugPrint('📦 Dados enviados: $dadosVisita');
+
+      final response = await api.post('/visitas', dadosVisita);
+
+      debugPrint('📡 Status resposta: ${response.statusCode}');
+      debugPrint('📥 Resposta: ${response.body}');
 
       if (response.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Visita agendada com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
         widget.onSalvo();
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erro ao salvar visita'),
+            SnackBar(
+              content: Text('Erro ao salvar visita: ${response.body}'),
               backgroundColor: Colors.red,
             ),
           );
         }
       }
     } catch (e) {
+      debugPrint('❌ Erro ao salvar visita: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erro ao salvar visita'),
+          SnackBar(
+            content: Text('Erro ao salvar visita: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1135,8 +1609,8 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
       elevation: 10,
       child: Container(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8, // Limita altura
-          maxWidth: MediaQuery.of(context).size.width * 0.9, // Limita largura
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -1150,9 +1624,8 @@ class _ConfirmarVisitaDialogState extends State<ConfirmarVisitaDialog> {
           ),
         ),
         child: SingleChildScrollView(
-          // Adicionado scroll
           child: Padding(
-            padding: const EdgeInsets.all(20), // Reduzido de 28 para 24
+            padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

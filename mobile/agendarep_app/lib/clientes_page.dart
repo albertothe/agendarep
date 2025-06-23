@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:jwt_decode/jwt_decode.dart';
@@ -561,6 +562,8 @@ class _ClientesPageState extends State<ClientesPage> {
   void _editarPotencial(Map<String, dynamic> cliente,
       Map<String, dynamic> grupo, StateSetter setModalState) {
     double valorAtual = grupo['potencial_compra'] as double;
+    final TextEditingController valorController = TextEditingController(
+        text: valorAtual.toStringAsFixed(2).replaceAll('.', ','));
 
     showDialog(
       context: context,
@@ -570,285 +573,338 @@ class _ClientesPageState extends State<ClientesPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366f1).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.edit,
-                          color: Color(0xFF6366f1),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Editar Potencial',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1f2937),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Info do grupo
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
                       children: [
-                        Text(
-                          grupo['nome_grupo'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1f2937),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366f1).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Color(0xFF6366f1),
+                            size: 18,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Cliente: ${cliente['nome']}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF6b7280),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Editar Potencial',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1f2937),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-                  // Campo de valor com botões + e -
-                  const Text(
-                    'Potencial de Compra Mensal',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Controles de valor
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        // Valor atual
-                        Text(
-                          NumberFormat.simpleCurrency(locale: 'pt_BR')
-                              .format(valorAtual),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1f2937),
+                    // Info do grupo
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            grupo['nome_grupo'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1f2937),
+                            ),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Cliente: ${cliente['nome']}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6b7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Campo de valor atual
+                    const Text(
+                      'Potencial de Compra Mensal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Valor atual display
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        NumberFormat.simpleCurrency(locale: 'pt_BR')
+                            .format(valorAtual),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1f2937),
                         ),
-                        const SizedBox(height: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-                        // Botões de incremento/decremento
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // Botão -1000
-                            _buildIncrementButton(
-                              icon: Icons.remove,
-                              label: '-R\$ 1.000',
-                              onPressed: () {
-                                setDialogState(() {
-                                  valorAtual = (valorAtual - 1000)
-                                      .clamp(0, double.infinity);
-                                });
-                              },
-                              color: const Color(0xFFdc2626),
-                            ),
-
-                            // Botão -100
-                            _buildIncrementButton(
-                              icon: Icons.remove,
-                              label: '-R\$ 100',
-                              onPressed: () {
-                                setDialogState(() {
-                                  valorAtual = (valorAtual - 100)
-                                      .clamp(0, double.infinity);
-                                });
-                              },
-                              color: const Color(0xFFf59e0b),
-                            ),
-
-                            // Botão +100
-                            _buildIncrementButton(
-                              icon: Icons.add,
-                              label: '+R\$ 100',
-                              onPressed: () {
-                                setDialogState(() {
-                                  valorAtual += 100;
-                                });
-                              },
-                              color: const Color(0xFF10b981),
-                            ),
-
-                            // Botão +1000
-                            _buildIncrementButton(
-                              icon: Icons.add,
-                              label: '+R\$ 1.000',
-                              onPressed: () {
-                                setDialogState(() {
-                                  valorAtual += 1000;
-                                });
-                              },
-                              color: const Color(0xFF059669),
-                            ),
-                          ],
+                    // Campo de entrada direta
+                    TextField(
+                      controller: valorController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9,]')),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Digite o valor',
+                        prefixText: 'R\$ ',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        final cleanValue = value.replaceAll(',', '.');
+                        final parsedValue = double.tryParse(cleanValue) ?? 0.0;
+                        setDialogState(() {
+                          valorAtual = parsedValue;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
-                        const SizedBox(height: 16),
-
-                        // Botão Reset
-                        TextButton(
+                    // Botões de incremento/decremento
+                    const Text(
+                      'Ajustes Rápidos',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Botão -1000
+                        _buildIncrementButton(
+                          icon: Icons.remove,
+                          label: '-1K',
                           onPressed: () {
                             setDialogState(() {
-                              valorAtual = 0;
+                              valorAtual =
+                                  (valorAtual - 1000).clamp(0, double.infinity);
+                              valorController.text = valorAtual
+                                  .toStringAsFixed(2)
+                                  .replaceAll('.', ',');
                             });
                           },
-                          child: const Text(
-                            'Zerar Valor',
-                            style: TextStyle(
-                              color: Color(0xFF6b7280),
-                              fontSize: 14,
-                            ),
-                          ),
+                          color: const Color(0xFFdc2626),
+                        ),
+
+                        // Botão -100
+                        _buildIncrementButton(
+                          icon: Icons.remove,
+                          label: '-100',
+                          onPressed: () {
+                            setDialogState(() {
+                              valorAtual =
+                                  (valorAtual - 100).clamp(0, double.infinity);
+                              valorController.text = valorAtual
+                                  .toStringAsFixed(2)
+                                  .replaceAll('.', ',');
+                            });
+                          },
+                          color: const Color(0xFFf59e0b),
+                        ),
+
+                        // Botão +100
+                        _buildIncrementButton(
+                          icon: Icons.add,
+                          label: '+100',
+                          onPressed: () {
+                            setDialogState(() {
+                              valorAtual += 100;
+                              valorController.text = valorAtual
+                                  .toStringAsFixed(2)
+                                  .replaceAll('.', ',');
+                            });
+                          },
+                          color: const Color(0xFF10b981),
+                        ),
+
+                        // Botão +1000
+                        _buildIncrementButton(
+                          icon: Icons.add,
+                          label: '+1K',
+                          onPressed: () {
+                            setDialogState(() {
+                              valorAtual += 1000;
+                              valorController.text = valorAtual
+                                  .toStringAsFixed(2)
+                                  .replaceAll('.', ',');
+                            });
+                          },
+                          color: const Color(0xFF059669),
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
-                  // Botões
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: Color(0xFF6366f1)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cancelar',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF6366f1),
-                            ),
+                    // Botão Reset
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          setDialogState(() {
+                            valorAtual = 0;
+                            valorController.text = '0,00';
+                          });
+                        },
+                        child: const Text(
+                          'Zerar Valor',
+                          style: TextStyle(
+                            color: Color(0xFF6b7280),
+                            fontSize: 14,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              final response = await api.put(
-                                  '/clientes/${cliente['id_cliente']}/grupos/${grupo['id_grupo']}',
-                                  {'potencial_compra': valorAtual});
+                    ),
 
-                              if (response.statusCode == 200) {
-                                // Atualizar os dados localmente
-                                final diff = valorAtual -
-                                    (grupo['potencial_compra'] as double);
-                                grupo['potencial_compra'] = valorAtual;
-                                cliente['totalPotencial'] =
-                                    (cliente['totalPotencial'] as double) +
-                                        diff;
-                                final totalPotencial =
-                                    cliente['totalPotencial'] as double;
-                                final totalComprado =
-                                    cliente['totalComprado'] as double;
-                                cliente['progresso'] = totalPotencial > 0
-                                    ? ((totalComprado / totalPotencial) * 100)
-                                        .round()
-                                    : 0;
+                    const SizedBox(height: 16),
 
-                                // Atualizar a lista principal
-                                setState(() {});
+                    // Botões
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: Color(0xFF6366f1)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancelar',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6366f1),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                final response = await api.put(
+                                    '/clientes/${cliente['id_cliente']}/grupos/${grupo['id_grupo']}',
+                                    {'potencial_compra': valorAtual});
 
-                                // Atualizar o modal
-                                setModalState(() {});
+                                if (response.statusCode == 200) {
+                                  // Atualizar os dados localmente
+                                  final diff = valorAtual -
+                                      (grupo['potencial_compra'] as double);
+                                  grupo['potencial_compra'] = valorAtual;
+                                  cliente['totalPotencial'] =
+                                      (cliente['totalPotencial'] as double) +
+                                          diff;
+                                  final totalPotencial =
+                                      cliente['totalPotencial'] as double;
+                                  final totalComprado =
+                                      cliente['totalComprado'] as double;
+                                  cliente['progresso'] = totalPotencial > 0
+                                      ? ((totalComprado / totalPotencial) * 100)
+                                          .round()
+                                      : 0;
 
+                                  // Atualizar a lista principal
+                                  setState(() {});
+
+                                  // Atualizar o modal
+                                  setModalState(() {});
+
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Potencial atualizado com sucesso!'),
+                                        backgroundColor: Color(0xFF10b981),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  throw Exception(
+                                      'Erro na resposta do servidor');
+                                }
+                              } catch (e) {
                                 if (context.mounted) {
-                                  Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                          'Potencial atualizado com sucesso!'),
-                                      backgroundColor: Color(0xFF10b981),
+                                      content:
+                                          Text('Erro ao atualizar potencial'),
+                                      backgroundColor: Color(0xFFdc2626),
                                     ),
                                   );
                                 }
-                              } else {
-                                throw Exception('Erro na resposta do servidor');
                               }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Erro ao atualizar potencial'),
-                                    backgroundColor: Color(0xFFdc2626),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366f1),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6366f1),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Salvar',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                            child: const Text(
+                              'Salvar',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -866,8 +922,8 @@ class _ClientesPageState extends State<ClientesPage> {
     return Column(
       children: [
         Container(
-          width: 50,
-          height: 50,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -875,7 +931,7 @@ class _ClientesPageState extends State<ClientesPage> {
           ),
           child: IconButton(
             onPressed: onPressed,
-            icon: Icon(icon, color: color, size: 20),
+            icon: Icon(icon, color: color, size: 18),
             padding: EdgeInsets.zero,
           ),
         ),
@@ -1107,10 +1163,10 @@ class _ClientesPageState extends State<ClientesPage> {
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(16),
                           title: Text(
-                            '${cliente['nome']} - ${cliente['id_cliente']}',
+                            '${cliente['id_cliente']} ${cliente['nome']}',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 16,
                               color: Color(0xFF1f2937),
                             ),
                           ),
@@ -1121,14 +1177,14 @@ class _ClientesPageState extends State<ClientesPage> {
                               Text(
                                 'Potencial: ${_formatCurrencyShort(cliente['totalPotencial'])}',
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: Color(0xFF6b7280),
                                 ),
                               ),
                               Text(
                                 'Comprado: ${_formatCurrencyShort(cliente['totalComprado'])}',
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: Color(0xFF6b7280),
                                 ),
                               ),
@@ -1191,29 +1247,29 @@ class _ClientesPageState extends State<ClientesPage> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // era 16
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 32, // era 40
-              height: 32, // era 40
+              width: 28, // era 32
+              height: 28, // era 32
               decoration: BoxDecoration(
                 color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8), // era 10
+                borderRadius: BorderRadius.circular(6), // era 8
               ),
               child: Icon(
                 icon,
                 color: iconColor,
-                size: 16, // era 20
+                size: 14, // era 16
               ),
             ),
-            const SizedBox(height: 8), // era 12
+            const SizedBox(height: 6), // era 8
             Flexible(
               child: Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 15, // era 16
+                  fontSize: 13, // era 15
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1f2937),
                 ),
@@ -1222,15 +1278,15 @@ class _ClientesPageState extends State<ClientesPage> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(height: 2), // era 4
+            const SizedBox(height: 2),
             Flexible(
               child: Text(
                 label,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10, // era 11
                   color: Color(0xFF6b7280),
-                  height: 1.2,
+                  height: 1.1, // era 1.2
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

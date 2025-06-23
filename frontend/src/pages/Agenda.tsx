@@ -23,7 +23,8 @@ import {
     TableRow,
 } from "@mui/material"
 import { Add, Check, CalendarMonth } from "@mui/icons-material"
-import { API_URL } from "../services/api"
+
+const API = import.meta.env.VITE_API_URL
 
 const horas = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
 
@@ -41,6 +42,8 @@ const Agenda = () => {
     const [usarClienteTemporario, setUsarClienteTemporario] = useState(false)
     const [observacaoEditada, setObservacaoEditada] = useState("")
     const [visitaParaConfirmar, setVisitaParaConfirmar] = useState<any | null>(null)
+    const [buscaCliente, setBuscaCliente] = useState("")
+    const [clienteSelecionado, setClienteSelecionado] = useState<any>(null)
 
     const token = localStorage.getItem("token")
 
@@ -68,7 +71,7 @@ const Agenda = () => {
         const fim = diasSemana[6].format("YYYY-MM-DD")
         const params: any = { inicio, fim }
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API_URL}/visitas`, {
+        const res = await axios.get(`${API}/visitas`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -78,7 +81,7 @@ const Agenda = () => {
     const buscarClientes = async () => {
         const params: any = {}
         if (repSelecionado) params.codusuario = repSelecionado
-        const res = await axios.get(`${API_URL}/visitas/clientes/representante`, {
+        const res = await axios.get(`${API}/visitas/clientes/representante`, {
             params,
             headers: { Authorization: `Bearer ${token}` },
         })
@@ -86,7 +89,7 @@ const Agenda = () => {
     }
 
     const carregarRepresentantes = async () => {
-        const res = await axios.get(`${API_URL}/usuarios/representantes`, {
+        const res = await axios.get(`${API}/usuarios/representantes`, {
             headers: { Authorization: `Bearer ${token}` },
         })
         setRepresentantes(res.data)
@@ -95,15 +98,55 @@ const Agenda = () => {
     const abrirModal = (data: string, hora: string) => {
         setNovaVisita({ data, hora })
         setUsarClienteTemporario(false)
+        setBuscaCliente("")
+        setClienteSelecionado(null)
         setModalAberto(true)
     }
 
     const salvarVisita = async () => {
-        await axios.post(`${API_URL}/visitas`, novaVisita, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-        setModalAberto(false)
-        buscarVisitas()
+        try {
+            // Preparar dados da visita
+            const dadosVisita = { ...novaVisita }
+
+            // Se for coordenador/diretor, OBRIGATORIAMENTE usar o representante selecionado
+            if (perfil === "coordenador" || perfil === "diretor") {
+                if (!novaVisita.codusuario) {
+                    console.error("Erro: Representante não selecionado!")
+                    return
+                }
+                dadosVisita.codusuario = novaVisita.codusuario
+            }
+            // Se for representante, remover codusuario para que backend use o token
+            else {
+                delete dadosVisita.codusuario
+            }
+
+            console.log("=== DEBUG SALVAR VISITA ===")
+            console.log("Perfil do usuário:", perfil)
+            console.log("Representante selecionado no modal:", novaVisita.codusuario)
+            console.log("Dados finais sendo enviados:", dadosVisita)
+            console.log("Campo codusuario no payload:", dadosVisita.codusuario)
+            console.log("========================")
+
+            const response = await axios.post(`${API}/visitas`, dadosVisita, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+
+            console.log("Resposta do backend:", response.data)
+
+            setModalAberto(false)
+            setNovaVisita({})
+            setBuscaCliente("")
+            setClienteSelecionado(null)
+            buscarVisitas()
+
+            console.log("Visita criada com sucesso!")
+        } catch (error: any) {
+            console.error("Erro ao criar visita:", error)
+            if (error?.response) {
+                console.error("Dados do erro:", error.response.data)
+            }
+        }
     }
 
     const abrirModalConfirmar = (visita: any) => {
@@ -114,14 +157,14 @@ const Agenda = () => {
     const confirmarVisita = async () => {
         if (!visitaParaConfirmar) return
         await axios.put(
-            `${API_URL}/visitas/${visitaParaConfirmar.id}/observacao`,
+            `${API}/visitas/${visitaParaConfirmar.id}/observacao`,
             { observacao: observacaoEditada },
             {
                 headers: { Authorization: `Bearer ${token}` },
             },
         )
         await axios.put(
-            `${API_URL}/visitas/${visitaParaConfirmar.id}/confirmar`,
+            `${API}/visitas/${visitaParaConfirmar.id}/confirmar`,
             {},
             {
                 headers: { Authorization: `Bearer ${token}` },
@@ -146,16 +189,51 @@ const Agenda = () => {
     }
 
     const formatarDiaSemana = (dia: dayjs.Dayjs) => {
-        // dayjs retorna os nomes dos dias em português quando a localidade
-        // "pt-br" está ativa. Porém, alguns dias incluem o sufixo "-feira",
-        // que não desejamos exibir.
-        let nome = dia.format("dddd")
-        nome = nome.charAt(0).toUpperCase() + nome.slice(1)
-        if (nome.endsWith("-feira")) {
-            nome = nome.replace("-feira", "")
+        const nomesDias = {
+            domingo: "Domingo",
+            segunda: "Segunda",
+            terça: "Terça",
+            quarta: "Quarta",
+            quinta: "Quinta",
+            sexta: "Sexta",
+            sábado: "Sábado",
         }
-        return `${nome}, ${dia.format("MMM DD")}`
+
+        const diaSemanaKey = dia.format("dddd").toLowerCase()
+        const diaSemana = nomesDias[diaSemanaKey as keyof typeof nomesDias] || dia.format("dddd")
+        return `${diaSemana}, ${dia.format("MMM DD")}`
     }
+
+    const clientesFiltrados = clientes.filter((cliente) =>
+        cliente.nome.toLowerCase().includes(buscaCliente.toLowerCase()),
+    )
+
+    const buscarClientesRepresentante = async (codusuario: string) => {
+        try {
+            console.log("Buscando clientes para representante:", codusuario)
+            const params = { codusuario }
+            const res = await axios.get(`${API}/visitas/clientes/representante`, {
+                params,
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            console.log("Clientes encontrados:", res.data)
+            setClientes(res.data)
+        } catch (error) {
+            console.error("Erro ao buscar clientes do representante:", error)
+            setClientes([])
+        }
+    }
+
+    useEffect(() => {
+        if (!modalAberto) {
+            // Quando modal fechar, restaurar clientes baseado no filtro da página
+            if (repSelecionado) {
+                buscarClientesRepresentante(repSelecionado)
+            } else {
+                buscarClientes()
+            }
+        }
+    }, [modalAberto])
 
     return (
         <Box sx={{ p: 3 }}>
@@ -316,7 +394,7 @@ const Agenda = () => {
                                                         </Box>
                                                     )}
 
-                                                    {!visita.confirmado && (
+                                                    {!visita.confirmado && perfil === "representante" && (
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => abrirModalConfirmar(visita)}
@@ -379,22 +457,79 @@ const Agenda = () => {
                         top: "50%",
                         left: "50%",
                         transform: "translate(-50%, -50%)",
-                        width: 400,
+                        width: 500,
                         bgcolor: "background.paper",
                         borderRadius: 2,
                         boxShadow: 24,
                         p: 3,
+                        maxHeight: "90vh",
+                        overflow: "auto",
                     }}
                 >
                     <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                         Nova Visita
                     </Typography>
 
+                    {/* Seleção de representante para coordenadores/diretores */}
+                    {(perfil === "coordenador" || perfil === "diretor") && (
+                        <TextField
+                            select
+                            fullWidth
+                            label="Representante *"
+                            value={novaVisita.codusuario || ""}
+                            onChange={(e) => {
+                                const codusuario = e.target.value
+                                setNovaVisita({ ...novaVisita, codusuario })
+
+                                // Buscar clientes do representante selecionado
+                                if (codusuario) {
+                                    buscarClientesRepresentante(codusuario)
+                                } else {
+                                    setClientes([])
+                                }
+
+                                // Limpar seleção de cliente atual
+                                setBuscaCliente("")
+                                setClienteSelecionado(null)
+                                setNovaVisita((prev: any) => ({ ...prev, codusuario, id_cliente: null }))
+                            }}
+                            sx={{
+                                mb: 2,
+                                "& .MuiOutlinedInput-root": {
+                                    "& fieldset": {
+                                        borderColor: !novaVisita.codusuario ? "#f44336" : undefined,
+                                        borderWidth: !novaVisita.codusuario ? 2 : 1,
+                                    },
+                                },
+                                "& .MuiInputLabel-root": {
+                                    color: !novaVisita.codusuario ? "#f44336" : undefined,
+                                },
+                            }}
+                            required
+                            error={!novaVisita.codusuario}
+                            helperText={!novaVisita.codusuario ? "Selecione um representante" : ""}
+                        >
+                            <MenuItem value="" disabled>
+                                <em>Selecione um representante</em>
+                            </MenuItem>
+                            {representantes.map((r: any) => (
+                                <MenuItem key={r.codusuario} value={r.codusuario}>
+                                    {r.nome}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                    )}
+
                     <FormControlLabel
                         control={
                             <Switch
                                 checked={usarClienteTemporario}
-                                onChange={() => setUsarClienteTemporario(!usarClienteTemporario)}
+                                onChange={() => {
+                                    setUsarClienteTemporario(!usarClienteTemporario)
+                                    setBuscaCliente("")
+                                    setClienteSelecionado(null)
+                                    setNovaVisita({ ...novaVisita, id_cliente: null, nome_cliente_temp: "", telefone_temp: "" })
+                                }}
                             />
                         }
                         label="Cliente temporário"
@@ -402,22 +537,93 @@ const Agenda = () => {
                     />
 
                     {!usarClienteTemporario ? (
-                        <TextField
-                            select
-                            fullWidth
-                            label="Cliente"
-                            value={novaVisita.id_cliente || ""}
-                            onChange={(e) =>
-                                setNovaVisita({ ...novaVisita, id_cliente: e.target.value, nome_cliente_temp: "", telefone_temp: "" })
-                            }
-                            sx={{ mb: 2 }}
-                        >
-                            {clientes.map((c: any) => (
-                                <MenuItem key={c.id_cliente} value={c.id_cliente}>
-                                    {c.nome}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <Box sx={{ mb: 2 }}>
+                            <TextField
+                                fullWidth
+                                label="Buscar cliente"
+                                value={buscaCliente}
+                                onChange={(e) => setBuscaCliente(e.target.value)}
+                                placeholder="Digite o nome do cliente..."
+                                sx={{ mb: 1 }}
+                                InputProps={{
+                                    endAdornment: buscaCliente && (
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                                setBuscaCliente("")
+                                                setClienteSelecionado(null)
+                                                setNovaVisita({ ...novaVisita, id_cliente: null })
+                                            }}
+                                        >
+                                            <Typography variant="caption">✕</Typography>
+                                        </IconButton>
+                                    ),
+                                }}
+                            />
+
+                            {clienteSelecionado && (
+                                <Box
+                                    sx={{
+                                        p: 2,
+                                        bgcolor: "#e3f2fd",
+                                        borderRadius: 1,
+                                        border: "2px solid #2196f3",
+                                        mb: 1,
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: "#1976d2" }}>
+                                        ✓ {clienteSelecionado.nome}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {clienteSelecionado.telefone}
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {buscaCliente && !clienteSelecionado && (
+                                <Paper
+                                    elevation={2}
+                                    sx={{
+                                        maxHeight: 200,
+                                        overflow: "auto",
+                                        border: "1px solid #e0e0e0",
+                                    }}
+                                >
+                                    {clientesFiltrados.length > 0 ? (
+                                        clientesFiltrados.map((cliente: any) => (
+                                            <Box
+                                                key={cliente.id_cliente}
+                                                sx={{
+                                                    p: 2,
+                                                    borderBottom: "1px solid #f0f0f0",
+                                                    cursor: "pointer",
+                                                    "&:hover": { bgcolor: "#f5f5f5" },
+                                                    "&:last-child": { borderBottom: "none" },
+                                                }}
+                                                onClick={() => {
+                                                    setClienteSelecionado(cliente)
+                                                    setNovaVisita({ ...novaVisita, id_cliente: cliente.id_cliente })
+                                                    setBuscaCliente("")
+                                                }}
+                                            >
+                                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {cliente.nome}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {cliente.telefone}
+                                                </Typography>
+                                            </Box>
+                                        ))
+                                    ) : (
+                                        <Box sx={{ p: 2, textAlign: "center" }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Nenhum cliente encontrado
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Paper>
+                            )}
+                        </Box>
                     ) : (
                         <>
                             <TextField
@@ -448,10 +654,45 @@ const Agenda = () => {
                     />
 
                     <Box sx={{ display: "flex", gap: 2 }}>
-                        <Button fullWidth variant="outlined" onClick={() => setModalAberto(false)}>
+                        <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={() => {
+                                setModalAberto(false)
+                                setBuscaCliente("")
+                                setClienteSelecionado(null)
+                            }}
+                        >
                             Cancelar
                         </Button>
-                        <Button fullWidth variant="contained" onClick={salvarVisita}>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            onClick={salvarVisita}
+                            disabled={
+                                // Validação para coordenador/diretor: deve selecionar representante
+                                ((perfil === "coordenador" || perfil === "diretor") && !novaVisita.codusuario) ||
+                                // Validação de cliente: deve selecionar cliente ou preencher nome temporário
+                                (!usarClienteTemporario && !novaVisita.id_cliente) ||
+                                (usarClienteTemporario && !novaVisita.nome_cliente_temp)
+                            }
+                            sx={{
+                                bgcolor:
+                                    ((perfil === "coordenador" || perfil === "diretor") && !novaVisita.codusuario) ||
+                                        (!usarClienteTemporario && !novaVisita.id_cliente) ||
+                                        (usarClienteTemporario && !novaVisita.nome_cliente_temp)
+                                        ? "#ccc"
+                                        : "#6366f1",
+                                "&:hover": {
+                                    bgcolor:
+                                        ((perfil === "coordenador" || perfil === "diretor") && !novaVisita.codusuario) ||
+                                            (!usarClienteTemporario && !novaVisita.id_cliente) ||
+                                            (usarClienteTemporario && !novaVisita.nome_cliente_temp)
+                                            ? "#ccc"
+                                            : "#5856eb",
+                                },
+                            }}
+                        >
                             Salvar
                         </Button>
                     </Box>
